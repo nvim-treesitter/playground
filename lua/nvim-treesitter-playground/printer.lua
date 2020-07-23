@@ -10,9 +10,10 @@ function M.print_node(node, results, options)
   local indent_char = options.indent_char or '  '
   local type = node:type()
   local start_row, start_col, end_row, end_col = node:range()
-  local results = results or {}
+  local results = results or { lines = {}, nodes = {} }
 
-  table.insert(results, string.rep(indent_char, level) .. string.format("%s [%d, %d] - [%d, %d])", type, start_col, start_row, end_col, end_row))
+  table.insert(results.lines, string.rep(indent_char, level) .. string.format("%s [%d, %d] - [%d, %d])", type, start_col, start_row, end_col, end_row))
+  table.insert(results.nodes, node)
 
   local node_count = node:named_child_count()
 
