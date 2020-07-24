@@ -8,7 +8,8 @@ function M.init()
       module_path = "nvim-treesitter-playground.internal",
       keymaps = {
         open = 'gtd'
-      }
+      },
+      updatetime = 25
     }
   }
 end

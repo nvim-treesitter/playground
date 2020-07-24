@@ -13,8 +13,12 @@ local playground_ns = api.nvim_create_namespace('nvim-treesitter-playground')
 
 local function clear_entry(bufnr)
   if M._displays_by_buf[bufnr] then
+    for _, window in ipairs(vim.fn.win_findbuf(M._displays_by_buf[bufnr])) do
+      api.nvim_win_close(window, true)
+    end
+
     if api.nvim_buf_is_loaded(M._displays_by_buf[bufnr]) then
-      -- Close buffer here
+      vim.cmd(string.format("bw! %d", M._displays_by_buf[bufnr]))
     end
   end
 
@@ -23,11 +27,14 @@ local function clear_entry(bufnr)
 end
 
 local function setup_buf(for_buf)
-  local buf = api.nvim_create_buf(false, true)
+  if M._displays_by_buf[for_buf] then
+    return M._displays_by_buf[for_buf]
+  end
+
+  local buf = api.nvim_create_buf(false, false)
 
   api.nvim_buf_set_option(buf, 'buftype', 'nofile')
   api.nvim_buf_set_option(buf, 'swapfile', false)
-  api.nvim_buf_set_option(buf, 'bufhidden', 'delete')
   api.nvim_buf_set_option(buf, 'buflisted', false)
   api.nvim_buf_set_option(buf, 'filetype', 'tsplayground')
 
@@ -68,7 +75,7 @@ M.highlight_playground_node = utils.debounce(function(bufnr)
   local lines = api.nvim_buf_get_lines(display_buf, line, line + 1, false)
 
   if line and lines[1] then
-    vim.highlight.range(display_buf, playground_ns, 'TSDefinitionUsage', { line, 0 }, { line, #lines[1] })
+    vim.highlight.range(display_buf, playground_ns, 'TSPlaygroundFocus', { line, 0 }, { line, #lines[1] })
 
     local windows = vim.fn.win_findbuf(display_buf)
 
@@ -77,8 +84,9 @@ M.highlight_playground_node = utils.debounce(function(bufnr)
     end
   end
 end, function(bufnr)
-  -- TODO: Have this configurable
-  return 25
+  local config = configs.get_module 'playground'
+
+  return config and config.updatetime or 25
 end)
 
 function M.highlight_node(bufnr)
@@ -95,7 +103,7 @@ function M.highlight_node(bufnr)
 
   local start_row, start_col, _ = node:start()
 
-  ts_utils.highlight_node(node, bufnr, playground_ns, 'TSDefinitionUsage')
+  ts_utils.highlight_node(node, bufnr, playground_ns, 'TSPlaygroundFocus')
 
   for _, window in ipairs(vim.fn.win_findbuf(bufnr)) do
     api.nvim_win_set_cursor(window, { start_row + 1, start_col })
@@ -167,8 +175,17 @@ function M.attach(bufnr, lang)
 end
 
 function M.detach(bufnr)
+  local config = configs.get_module 'playground'
+
   clear_entry(bufnr)
-  -- TODO: Clean up here
+  vim.cmd(string.format('autocmd! TreesitterPlayground_%d CursorMoved', bufnr))
+  vim.cmd(string.format('autocmd! TreesitterPlayground_%d BufLeave', bufnr))
+
+  for fn, mapping in pairs(config.keymaps) do
+    if mapping then
+      api.nvim_buf_del_keymap(bufnr, 'n', mapping)
+    end
+  end
 end
 
 return M
