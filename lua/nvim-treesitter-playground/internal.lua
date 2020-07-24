@@ -42,6 +42,7 @@ local function setup_buf(for_buf)
   vim.cmd 'au!'
   vim.cmd(string.format([[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.highlight_node(%d)]], buf, for_buf))
   vim.cmd(string.format([[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_highlights(%d)]], buf, for_buf))
+  vim.cmd(string.format([[autocmd BufWinEnter <buffer=%d> lua require'nvim-treesitter-playground.internal'.update(%d)]], buf, for_buf))
   vim.cmd 'augroup END'
 
   api.nvim_buf_attach(buf, false, {
@@ -72,10 +73,12 @@ M.highlight_playground_node = utils.debounce(function(bufnr)
     end
   end
 
-  local lines = api.nvim_buf_get_lines(display_buf, line, line + 1, false)
+  if line then
+    local lines = api.nvim_buf_get_lines(display_buf, line, line + 1, false)
 
-  if line and lines[1] then
-    vim.highlight.range(display_buf, playground_ns, 'TSPlaygroundFocus', { line, 0 }, { line, #lines[1] })
+    if lines[1] then
+      vim.highlight.range(display_buf, playground_ns, 'TSPlaygroundFocus', { line, 0 }, { line, #lines[1] })
+    end
 
     local windows = vim.fn.win_findbuf(display_buf)
 
@@ -135,7 +138,7 @@ function M.open(bufnr)
   api.nvim_win_set_option(0, 'relativenumber', false)
   api.nvim_win_set_option(0, 'cursorline', false)
 
-  M.update(bufnr)
+  -- M.update(bufnr)
 end
 
 function M.update(bufnr)
@@ -143,6 +146,11 @@ function M.update(bufnr)
   local display_buf = M._displays_by_buf[bufnr]
 
   if not display_buf then return end
+
+  local windows = vim.fn.win_findbuf(display_buf)
+
+  -- Don't bother updating if the playground isn't shown
+  if #windows == 0 then return end
 
   local results = printer.print(bufnr)
 
