@@ -1,6 +1,7 @@
 local configs = require 'nvim-treesitter.configs'
 local ts_utils = require 'nvim-treesitter.ts_utils'
 local printer = require 'nvim-treesitter-playground.printer'
+local utils = require 'nvim-treesitter-playground.utils'
 local api = vim.api
 
 local M = {}
@@ -9,6 +10,17 @@ M._displays_by_buf = {}
 M._results_by_buf = {}
 
 local playground_ns = api.nvim_create_namespace('nvim-treesitter-playground')
+
+local function clear_entry(bufnr)
+  if M._displays_by_buf[bufnr] then
+    if api.nvim_buf_is_loaded(M._displays_by_buf[bufnr]) then
+      -- Close buffer here
+    end
+  end
+
+  M._displays_by_buf[bufnr] = nil
+  M._results_by_buf[bufnr] = nil
+end
 
 local function setup_buf(for_buf)
   local buf = api.nvim_create_buf(false, true)
@@ -25,8 +37,43 @@ local function setup_buf(for_buf)
   vim.cmd(string.format([[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_highlights(%d)]], buf, for_buf))
   vim.cmd 'augroup END'
 
+  api.nvim_buf_attach(buf, false, {
+    on_detach = function() clear_entry(for_buf) end
+  })
+
   return buf
 end
+
+M.highlight_playground_node = utils.debounce(function(bufnr)
+  M.clear_playground_highlights(bufnr)
+
+  local display_buf = M._displays_by_buf[bufnr]
+  local results = M._results_by_buf[bufnr]
+
+  if not display_buf or not results then return end
+
+  local success, node_at_point = pcall(function() return ts_utils.get_node_at_cursor() end)
+
+  if not success or not node_at_point then return end
+
+  local line
+
+  for i, node in ipairs(results.nodes) do
+    if node_at_point == node then
+      line = i - 1
+      break
+    end
+  end
+
+  local lines = api.nvim_buf_get_lines(display_buf, line, line + 1, false)
+
+  if line and lines[1] then
+    vim.highlight.range(display_buf, playground_ns, 'TSDefinitionUsage', { line, 0 }, { line, #lines[1] })
+  end
+end, function(bufnr)
+  -- TODO: Have this configurable
+  return 25
+end)
 
 function M.highlight_node(bufnr)
   M.clear_highlights(bufnr)
@@ -43,6 +90,14 @@ end
 
 function M.clear_highlights(bufnr)
   api.nvim_buf_clear_namespace(bufnr, playground_ns, 0, -1)
+end
+
+function M.clear_playground_highlights(bufnr)
+  local display_buf = M._displays_by_buf[bufnr]
+
+  if display_buf then
+    M.clear_highlights(display_buf)
+  end
 end
 
 function M.open(bufnr)
@@ -75,7 +130,7 @@ function M.update(bufnr)
 end
 
 function M.attach(bufnr, lang)
-  local buf = bufnr or api.nvim_get_current_buf()
+  local bufnr = bufnr or api.nvim_get_current_buf()
   local config = configs.get_module 'playground'
 
   for fn, mapping in pairs(config.keymaps) do
@@ -85,12 +140,20 @@ function M.attach(bufnr, lang)
     end
   end
 
-  api.nvim_buf_attach(buf, true, {
-    on_lines = vim.schedule_wrap(function() M.update(buf) end)
+  api.nvim_buf_attach(bufnr, true, {
+    on_lines = vim.schedule_wrap(function() M.update(bufnr) end),
+    on_detach = function() clear_entry(bufnr) end
   })
+
+  vim.cmd(string.format('augroup TreesitterPlayground_%d', bufnr))
+  vim.cmd 'au!'
+  vim.cmd(string.format([[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.highlight_playground_node(%d)]], bufnr, bufnr))
+  vim.cmd(string.format([[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_playground_highlights(%d)]], bufnr, bufnr))
+  vim.cmd 'augroup END'
 end
 
 function M.detach(bufnr)
+  clear_entry(bufnr)
   -- TODO: Clean up here
 end
 
