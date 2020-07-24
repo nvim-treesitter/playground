@@ -69,6 +69,12 @@ M.highlight_playground_node = utils.debounce(function(bufnr)
 
   if line and lines[1] then
     vim.highlight.range(display_buf, playground_ns, 'TSDefinitionUsage', { line, 0 }, { line, #lines[1] })
+
+    local windows = vim.fn.win_findbuf(display_buf)
+
+    for _, window in ipairs(windows) do
+      api.nvim_win_set_cursor(window, { line + 1, 0 })
+    end
   end
 end, function(bufnr)
   -- TODO: Have this configurable
@@ -85,7 +91,15 @@ function M.highlight_node(bufnr)
 
   local node = results.nodes[row]
 
+  if not node then return end
+
+  local start_row, start_col, _ = node:start()
+
   ts_utils.highlight_node(node, bufnr, playground_ns, 'TSDefinitionUsage')
+
+  for _, window in ipairs(vim.fn.win_findbuf(bufnr)) do
+    api.nvim_win_set_cursor(window, { start_row + 1, start_col })
+  end
 end
 
 function M.clear_highlights(bufnr)
