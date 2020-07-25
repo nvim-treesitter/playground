@@ -128,6 +128,7 @@ end
 function M.open(bufnr)
   local bufnr = bufnr or api.nvim_get_current_buf()
   local display_buf = setup_buf(bufnr)
+  local current_window = api.nvim_get_current_win()
 
   M._displays_by_buf[bufnr] = display_buf
   vim.cmd "vsplit"
@@ -138,7 +139,7 @@ function M.open(bufnr)
   api.nvim_win_set_option(0, 'relativenumber', false)
   api.nvim_win_set_option(0, 'cursorline', false)
 
-  -- M.update(bufnr)
+  api.nvim_set_current_win(current_window)
 end
 
 function M.update(bufnr)
