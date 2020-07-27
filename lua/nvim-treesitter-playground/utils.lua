@@ -18,4 +18,10 @@ function M.debounce(fn, debounce_time)
   end
 end
 
+function M.for_each_buf_window(bufnr, fn)
+  for _, window in ipairs(vim.fn.win_findbuf(bufnr)) do
+    fn(window)
+  end
+end
+
 return M
