@@ -8,12 +8,27 @@ local api = vim.api
 
 local M = {}
 
-M._displays_by_buf = {}
-M._results_by_buf = {}
-M._queries_by_buf = {}
+M._entries = setmetatable({}, {
+  __index = function(tbl, key)
+    local entry = rawget(tbl, key)
+
+    if not entry then
+      entry = {}
+      rawset(tbl, key, entry)
+    end
+
+    return entry
+  end
+})
 
 local playground_ns = api.nvim_create_namespace('nvim-treesitter-playground')
 local query_hl_ns = api.nvim_create_namespace('nvim-treesitter-playground-query')
+
+local function get_node_at_cursor()
+  local success, node_at_point = pcall(function() return ts_utils.get_node_at_cursor() end)
+
+  return success and node_at_point or nil
+end
 
 local function focus_buf(bufnr)
   if not bufnr then return end
@@ -44,14 +59,11 @@ local function close_buf(bufnr)
 end
 
 local function clear_entry(bufnr)
-  local display_buf = M._displays_by_buf[bufnr]
-  local query_buf = M._queries_by_buf[bufnr]
+  local entry = M._entries[bufnr]
 
-  close_buf(display_buf)
-  close_buf(query_buf)
-  M._displays_by_buf[bufnr] = nil
-  M._results_by_buf[bufnr] = nil
-  M._queries_by_buf[bufnr] = nil
+  close_buf(entry.display_bufnr)
+  close_buf(entry.query_bufnr)
+  M._entries[bufnr] = nil
 end
 
 local function is_buf_visible(bufnr)
@@ -60,9 +72,15 @@ local function is_buf_visible(bufnr)
   return #windows > 0
 end
 
+local function get_update_time()
+  local config = configs.get_module 'playground'
+
+  return config and config.updatetime or 25
+end
+
 local function setup_buf(for_buf)
-  if M._displays_by_buf[for_buf] then
-    return M._displays_by_buf[for_buf]
+  if M._entries[for_buf].display_bufnr then
+    return M._entries[for_buf].display_bufnr
   end
 
   local buf = api.nvim_create_buf(false, false)
@@ -89,8 +107,8 @@ local function setup_buf(for_buf)
 end
 
 local function setup_query_editor(bufnr)
-  if M._queries_by_buf[bufnr] then
-    return M._queries_by_buf[bufnr]
+  if M._entries[bufnr].query_bufnr then
+    return M._entries[bufnr].query_bufnr
   end
 
   local buf = api.nvim_create_buf(false, false)
@@ -100,7 +118,7 @@ local function setup_query_editor(bufnr)
   api.nvim_buf_set_option(buf, 'buflisted', false)
   api.nvim_buf_set_option(buf, 'filetype', 'query')
 
-  M._queries_by_buf[bufnr] = buf
+  vim.cmd(string.format([[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.on_query_cursor_move(%d)]], buf, bufnr))
 
   api.nvim_buf_set_keymap(buf, 'n', 'R', string.format(':lua require "nvim-treesitter-playground.internal".update_query(%d, %d)<CR>', bufnr, buf), { silent = true })
   api.nvim_buf_attach(buf, false, {
@@ -110,49 +128,64 @@ local function setup_query_editor(bufnr)
   return buf
 end
 
-M.highlight_playground_node = utils.debounce(function(bufnr)
-  M.clear_playground_highlights(bufnr)
+function M.highlight_playground_nodes(bufnr, nodes)
+  local entry = M._entries[bufnr]
+  local results = entry.results
+  local display_buf = entry.display_bufnr
+  local lines = {}
+  local count = 0
 
-  local display_buf = M._displays_by_buf[bufnr]
-  local results = M._results_by_buf[bufnr]
-
-  if not display_buf or not results then return end
-
-  local success, node_at_point = pcall(function() return ts_utils.get_node_at_cursor() end)
-
-  if not success or not node_at_point then return end
-
-  local line
+  if not results or not display_buf then return end
 
   for i, node in ipairs(results.nodes) do
-    if node_at_point == node then
-      line = i - 1
-      break
+    if vim.tbl_contains(nodes, node) then
+      table.insert(lines, i)
+      count = count + 1
+
+      if count >= #nodes then
+        break
+      end
     end
   end
 
-  if line then
-    local lines = api.nvim_buf_get_lines(display_buf, line, line + 1, false)
+  for _, lnum in ipairs(lines) do
+    local lines = api.nvim_buf_get_lines(display_buf, lnum - 1, lnum, false)
 
     if lines[1] then
-      vim.highlight.range(display_buf, playground_ns, 'TSPlaygroundFocus', { line, 0 }, { line, #lines[1] })
+      vim.highlight.range(display_buf, playground_ns, 'TSPlaygroundFocus', { lnum - 1, 0 }, { lnum - 1, #lines[1] })
     end
+  end
 
+  return lines
+end
+
+function M.highlight_playground_node_from_buffer(bufnr)
+  M.clear_playground_highlights(bufnr)
+
+  local display_buf = M._entries[bufnr].display_bufnr
+
+  if not display_buf then return end
+
+  local node_at_point = get_node_at_cursor()
+
+  if not node_at_point then return end
+
+  local lnums = M.highlight_playground_nodes(bufnr, { node_at_point })
+
+  if lnums[1] then
     utils.for_each_buf_window(display_buf, function(window)
-      api.nvim_win_set_cursor(window, { line + 1, 0 })
+      api.nvim_win_set_cursor(window, { lnums[1], 0 })
     end)
   end
-end, function(bufnr)
-  local config = configs.get_module 'playground'
+end
 
-  return config and config.updatetime or 25
-end)
+M._highlight_playground_node_debounced = utils.debounce(M.highlight_playground_node_from_buffer, get_update_time)
 
 function M.highlight_node(bufnr)
   M.clear_highlights(bufnr)
 
   local row, _ = unpack(api.nvim_win_get_cursor(0))
-  local results = M._results_by_buf[bufnr]
+  local results = M._entries[bufnr].results
 
   if not results then return end
 
@@ -162,11 +195,17 @@ function M.highlight_node(bufnr)
 
   local start_row, start_col, _ = node:start()
 
-  ts_utils.highlight_node(node, bufnr, playground_ns, 'TSPlaygroundFocus')
+  M.highlight_nodes(bufnr, { node })
 
   utils.for_each_buf_window(bufnr, function(window)
     api.nvim_win_set_cursor(window, { start_row + 1, start_col })
   end)
+end
+
+function M.highlight_nodes(bufnr, nodes)
+  for _, node in ipairs(nodes) do
+    ts_utils.highlight_node(node, bufnr, playground_ns, 'TSPlaygroundFocus')
+  end
 end
 
 function M.update_query(bufnr, query_bufnr)
@@ -175,12 +214,14 @@ function M.update_query(bufnr, query_bufnr)
   local capture_by_color = {}
   local index = 1
 
+  M._entries[bufnr].query_results = matches
+  M._entries[bufnr].captures = {}
   M.clear_highlights(query_bufnr, query_hl_ns)
   M.clear_highlights(bufnr, query_hl_ns)
 
-  print(bufnr, query_bufnr)
-
   for capture_match in ts_query.iter_group_results(query_bufnr, 'captures') do
+    table.insert(M._entries[bufnr].captures, capture_match.capture)
+
     local capture = ts_utils.get_node_text(capture_match.capture.name.node)[1]
 
     if not capture_by_color[capture] then
@@ -206,23 +247,65 @@ function M.update_query(bufnr, query_bufnr)
   end
 end
 
+function M.highlight_matched_query_nodes_from_capture(bufnr, capture)
+  local query_results = M._entries[bufnr].query_results
+  local display_buf = M._entries[bufnr].display_bufnr
+
+  if not query_results then return end
+
+  local nodes_to_highlight = {}
+
+  for _, result in ipairs(query_results) do
+    if result.tag == capture then
+      table.insert(nodes_to_highlight, result.node)
+    end
+  end
+
+  M.highlight_nodes(bufnr, nodes_to_highlight)
+
+  if display_buf then
+    M.highlight_playground_nodes(bufnr, nodes_to_highlight)
+  end
+end
+
+function M.on_query_cursor_move(bufnr)
+  local node_at_point = get_node_at_cursor()
+  local captures = M._entries[bufnr].captures
+
+  M.clear_highlights(bufnr)
+  M.clear_highlights(M._entries[bufnr].display_bufnr)
+
+  if not node_at_point or not captures then return end
+
+  for _, capture in ipairs(captures) do
+    local _, _, capture_start = capture.def.node:start()
+    local _, _, capture_end = capture.def.node:end_()
+    local _, _, start = node_at_point:start()
+    local _, _, _end = node_at_point:end_()
+    local capture_name = ts_utils.get_node_text(capture.name.node)[1]
+
+    if start >= capture_start and _end <= capture_end and capture_name then
+      M.highlight_matched_query_nodes_from_capture(bufnr, capture_name)
+      break
+    end
+  end
+end
+
 function M.clear_highlights(bufnr, namespace)
+  if not bufnr then return end
+
   local namespace = namespace or playground_ns
 
   api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
 end
 
 function M.clear_playground_highlights(bufnr)
-  local display_buf = M._displays_by_buf[bufnr]
-
-  if display_buf then
-    M.clear_highlights(display_buf)
-  end
+  M.clear_highlights(M._entries[bufnr].display_bufnr)
 end
 
 function M.toggle_query_editor(bufnr)
   local bufnr = bufnr or api.nvim_get_current_buf()
-  local display_buf = M._displays_by_buf[bufnr]
+  local display_buf = M._entries[bufnr].display_bufnr
   local current_win = api.nvim_get_current_win()
 
   if not display_buf then
@@ -234,7 +317,7 @@ function M.toggle_query_editor(bufnr)
   if is_buf_visible(query_buf) then
     close_buf_windows(query_buf)
   else
-    M._queries_by_buf[bufnr] = query_buf
+    M._entries[bufnr].query_bufnr = query_buf
 
     focus_buf(display_buf)
     vim.cmd "split"
@@ -252,7 +335,7 @@ function M.open(bufnr)
   local display_buf = setup_buf(bufnr)
   local current_window = api.nvim_get_current_win()
 
-  M._displays_by_buf[bufnr] = display_buf
+  M._entries[bufnr].display_bufnr = display_buf
   vim.cmd "vsplit"
   vim.cmd(string.format("buffer %d", display_buf))
 
@@ -268,10 +351,10 @@ end
 
 function M.toggle(bufnr)
   local bufnr = bufnr or api.nvim_get_current_buf()
-  local display_buf = M._displays_by_buf[bufnr]
+  local display_buf = M._entries[bufnr].display_bufnr
 
   if display_buf and is_buf_visible(display_buf) then
-    close_buf_windows(M._queries_by_buf[display_buf])
+    close_buf_windows(M._entries[bufnr].query_bufnr)
     close_buf_windows(display_buf)
   else
     M.open(bufnr)
@@ -280,14 +363,14 @@ end
 
 function M.update(bufnr)
   local bufnr = bufnr or api.nvim_get_current_buf()
-  local display_buf = M._displays_by_buf[bufnr]
+  local display_buf = M._entries[bufnr].display_bufnr
 
   -- Don't bother updating if the playground isn't shown
   if not display_buf or not is_buf_visible(display_buf) then return end
 
   local results = printer.print(bufnr)
 
-  M._results_by_buf[bufnr] = results
+  M._entries[bufnr].results = results
 
   api.nvim_buf_set_lines(display_buf, 0, -1, false, results.lines)
 end
@@ -298,19 +381,16 @@ function M.attach(bufnr, lang)
 
   api.nvim_buf_attach(bufnr, true, {
     on_lines = vim.schedule_wrap(function() M.update(bufnr) end)
-    -- on_detach = function() clear_entry(bufnr) end
   })
 
   vim.cmd(string.format('augroup TreesitterPlayground_%d', bufnr))
   vim.cmd 'au!'
-  vim.cmd(string.format([[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.highlight_playground_node(%d)]], bufnr, bufnr))
+  vim.cmd(string.format([[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'._highlight_playground_node_debounced(%d)]], bufnr, bufnr))
   vim.cmd(string.format([[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_playground_highlights(%d)]], bufnr, bufnr))
   vim.cmd 'augroup END'
 end
 
 function M.detach(bufnr)
-  local config = configs.get_module 'playground'
-
   clear_entry(bufnr)
   vim.cmd(string.format('autocmd! TreesitterPlayground_%d CursorMoved', bufnr))
   vim.cmd(string.format('autocmd! TreesitterPlayground_%d BufLeave', bufnr))

@@ -33,5 +33,10 @@ require "nvim-treesitter.configs".setup {
 
 The tree can be toggled using the command `:TSPlaygroundToggle`.
 
+### Keybindings
+
+- 'R': Refreshes the playground view when focused or reloads the query when the query editor is focused.
+- 'o': Toggles the query editor when the playground is focused
+
 # Roadmap
   - [ ] Add interactive query highlighting
