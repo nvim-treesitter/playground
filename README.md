@@ -17,6 +17,12 @@ Plug 'nvim-treesitter/nvim-treesitter'
 Plug 'nvim-treesitter/playground'
 ```
 
+It's also recommended that you install the `query` parser for query editor highlighting. Run this after installing the above plugins.
+
+```vim
+:TSInstall query
+```
+
 The configuration is like any other nvim-treesitter module.
 
 ```lua
