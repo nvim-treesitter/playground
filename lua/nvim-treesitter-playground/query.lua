@@ -7,7 +7,10 @@ local M = {}
 
 function M.parse(bufnr, query)
   local lang = api.nvim_buf_get_option(bufnr, 'ft')
-  local parsed_query = vim.treesitter.parse_query(lang, query)
+  local success, parsed_query = pcall(function() return vim.treesitter.parse_query(lang, query) end)
+
+  if not success then return {} end
+
   local parser = parsers.get_parser(bufnr, lang)
   local root = parser:parse():root()
   local start_row, _, end_row, _ = root:range()
