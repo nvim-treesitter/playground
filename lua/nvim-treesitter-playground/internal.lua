@@ -135,11 +135,15 @@ local function setup_query_editor(bufnr)
     on_lines = utils.debounce(function() M.update_query(bufnr, buf) end, 1000)
   })
 
-  M.read_saved_query(bufnr):then_(vim.schedule_wrap(function(lines)
-    if #lines > 0 then
-      api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-    end
-  end))
+  local config = configs.get_module 'playground'
+
+  if config.persist_queries then
+    M.read_saved_query(bufnr):then_(vim.schedule_wrap(function(lines)
+      if #lines > 0 then
+        api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+      end
+    end))
+  end
 
   return buf
 end
@@ -266,7 +270,12 @@ function M.update_query(bufnr, query_bufnr)
   local capture_by_color = {}
   local index = 1
 
-  M.save_query_file(bufnr, query)
+  local config = configs.get_module 'playground'
+
+  if config.persist_queries then
+    M.save_query_file(bufnr, query)
+  end
+
   M._entries[bufnr].query_results = matches
   M._entries[bufnr].captures = {}
   M.clear_highlights(query_bufnr, query_hl_ns)
