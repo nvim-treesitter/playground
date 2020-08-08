@@ -4,9 +4,19 @@ local printer = require 'nvim-treesitter-playground.printer'
 local utils = require 'nvim-treesitter-playground.utils'
 local ts_query = require 'nvim-treesitter.query'
 local pl_query = require 'nvim-treesitter-playground.query'
+local Promise = require 'nvim-treesitter-playground.promise'
 local api = vim.api
+local luv = vim.loop
 
 local M = {}
+
+local fs_mkdir = Promise.promisify(luv.fs_mkdir)
+local fs_open = Promise.promisify(luv.fs_open)
+local fs_write = Promise.promisify(luv.fs_write)
+local fs_close = Promise.promisify(luv.fs_close)
+local fs_stat = Promise.promisify(luv.fs_stat)
+local fs_fstat = Promise.promisify(luv.fs_fstat)
+local fs_read = Promise.promisify(luv.fs_read)
 
 M._entries = setmetatable({}, {
   __index = function(tbl, key)
@@ -125,7 +135,49 @@ local function setup_query_editor(bufnr)
     on_lines = utils.debounce(function() M.update_query(bufnr, buf) end, 1000)
   })
 
+  M.read_saved_query(bufnr):then_(vim.schedule_wrap(function(lines)
+    if #lines > 0 then
+      api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    end
+  end))
+
   return buf
+end
+
+local function get_cache_path()
+  return vim.fn.stdpath('cache') .. '/nvim_treesitter_playground'
+end
+
+local function get_filename(bufnr)
+  return vim.fn.fnamemodify(vim.fn.bufname(bufnr), ':t')
+end
+
+function M.save_query_file(bufnr, query)
+  local cache_path = get_cache_path()
+  local filename = get_filename(bufnr)
+
+  fs_stat(cache_path)
+    :catch(function() return fs_mkdir(cache_path, 775) end)
+    :then_(function() return fs_open(cache_path .. '/' .. filename .. '~', 'w', 444) end)
+    :then_(function(fd)
+      return fs_write(fd, query, -1):then_(function() return fd end)
+    end)
+    :then_(function(fd) return fs_close(fd) end)
+    :catch(function(err) print(err) end)
+end
+
+function M.read_saved_query(bufnr)
+  local cache_path = get_cache_path()
+  local filename = get_filename(bufnr)
+  local query_path = cache_path .. '/' .. filename .. '~'
+
+  return fs_open(query_path, 'r', 438)
+    :then_(function(fd) return fs_fstat(fd)
+      :then_(function(stat) return fs_read(fd, stat.size, 0) end)
+      :then_(function(data) return fs_close(fd)
+        :then_(function() return vim.split(data, '\n') end) end)
+    end)
+    :catch(function(err) return {} end)
 end
 
 function M.highlight_playground_nodes(bufnr, nodes)
@@ -214,6 +266,7 @@ function M.update_query(bufnr, query_bufnr)
   local capture_by_color = {}
   local index = 1
 
+  M.save_query_file(bufnr, query)
   M._entries[bufnr].query_results = matches
   M._entries[bufnr].captures = {}
   M.clear_highlights(query_bufnr, query_hl_ns)
