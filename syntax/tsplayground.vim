@@ -5,9 +5,11 @@ endif
 syn match nodeType "[a-zA-Z_]\+"
 syn match nodeNumber "\d\+"
 syn match nodeOp "[,\-\)]\+"
+syn match nodeTag "\k\+:"
 
 hi def link nodeType Identifier
 hi def link nodeNumber Number
 hi def link nodeOp Operator
+hi def link nodeTag Tag
 
 let b:current_syntax = 'tsplayground'

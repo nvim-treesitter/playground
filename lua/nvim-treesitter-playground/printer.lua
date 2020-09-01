@@ -4,21 +4,31 @@ local api = vim.api
 
 local M = {}
 
-function M.print_node(node, results, options)
-  local options = options or {}
-  local level = options.level or 0
-  local indent_char = options.indent_char or '  '
-  local type = node:type()
-  local start_row, start_col, end_row, end_col = node:range()
+local function print_tree(root, results, indent)
   local results = results or { lines = {}, nodes = {} }
+  local indentation = indent or ""
 
-  table.insert(results.lines, string.rep(indent_char, level) .. string.format("%s [%d, %d] - [%d, %d])", type, start_col, start_row, end_col, end_row))
-  table.insert(results.nodes, node)
+  for node, field in root:iter_children() do
+    if node:named() then
+      local line
+      if field then
+        line = string.format("%s%s: %s [%d, %d] - [%d, %d]",
+          indentation,
+          field,
+          node:type(),
+          node:range())
+      else
+        line = string.format("%s%s [%d, %d] - [%d, %d]",
+          indentation,
+          node:type(),
+          node:range())
+      end
 
-  local node_count = node:named_child_count()
+      table.insert(results.lines, line)
+      table.insert(results.nodes, node)
 
-  for i = 0, node:named_child_count() - 1, 1 do
-    M.print_node(node:named_child(i), results, vim.tbl_extend("force", options, { level = level + 1 }))
+      print_tree(node, results, indentation .. "  ")
+    end
   end
 
   return results
@@ -30,7 +40,7 @@ function M.print(bufnr, lang)
 
   if not parser then return end
 
-  return M.print_node(parser:parse():root())
+  return print_tree(parser:parse():root())
 end
 
 return M
