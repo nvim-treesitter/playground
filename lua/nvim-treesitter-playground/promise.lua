@@ -28,10 +28,6 @@ local function set_timeout(timeout, fn)
   return timer
 end
 
-local function exec_fn(fn)
-  set_timeout(fn)
-end
-
 function M.new(sink)
   local p = setmetatable({
     result = nil,

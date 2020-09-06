@@ -208,7 +208,7 @@ function M.highlight_playground_nodes(bufnr, nodes)
     local lines = api.nvim_buf_get_lines(display_buf, lnum - 1, lnum, false)
 
     if lines[1] then
-      vim.highlight.range(display_buf, playground_ns, 'TSPlaygroundFocus', { lnum - 1, 0 }, { lnum - 1, #lines[1] })
+      vim.api.nvim_buf_add_highlight(display_buf, playground_ns, 'TSPlaygroundFocus', lnum - 1, 0, -1)
     end
   end
 
@@ -438,9 +438,6 @@ function M.update(bufnr)
 end
 
 function M.attach(bufnr, lang)
-  local bufnr = bufnr or api.nvim_get_current_buf()
-  local config = configs.get_module 'playground'
-
   api.nvim_buf_attach(bufnr, true, {
     on_lines = vim.schedule_wrap(function() M.update(bufnr) end)
   })
