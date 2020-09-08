@@ -109,6 +109,7 @@ local function setup_buf(for_buf)
 
   api.nvim_buf_set_keymap(buf, 'n', 'o', string.format(':lua require "nvim-treesitter-playground.internal".toggle_query_editor(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_set_keymap(buf, 'n', 'R', string.format(':lua require "nvim-treesitter-playground.internal".update(%d)<CR>', for_buf), { silent = true })
+  api.nvim_buf_set_keymap(buf, 'n', '<cr>', string.format(':lua require "nvim-treesitter-playground.internal".goto_node(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_attach(buf, false, {
     on_detach = function() clear_entry(for_buf) end
   })
@@ -237,15 +238,19 @@ end
 
 M._highlight_playground_node_debounced = utils.debounce(M.highlight_playground_node_from_buffer, get_update_time)
 
-function M.highlight_node(bufnr)
-  M.clear_highlights(bufnr)
-
+function M.get_current_node(bufnr)
   local row, _ = unpack(api.nvim_win_get_cursor(0))
   local results = M._entries[bufnr].results
 
   if not results then return end
 
-  local node = results.nodes[row]
+  return results.nodes[row]
+end
+
+function M.highlight_node(bufnr)
+  M.clear_highlights(bufnr)
+
+  local node = M.get_current_node(bufnr)
 
   if not node then return end
 
@@ -261,6 +266,23 @@ end
 function M.highlight_nodes(bufnr, nodes)
   for _, node in ipairs(nodes) do
     ts_utils.highlight_node(node, bufnr, playground_ns, 'TSPlaygroundFocus')
+  end
+end
+
+function M.goto_node(bufnr)
+  local bufwin = vim.fn.win_findbuf(bufnr)[1]
+  if bufwin then
+    api.nvim_set_current_win(bufwin)
+  else
+    local node = M.get_current_node(bufnr)
+
+    local win = api.nvim_get_current_win()
+    vim.cmd "vsplit"
+    api.nvim_win_set_buf(win, bufnr)
+    api.nvim_set_current_win(win)
+
+    ts_utils.goto_node(node)
+    M.clear_highlights(bufnr)
   end
 end
 
