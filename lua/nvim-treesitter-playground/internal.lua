@@ -435,6 +435,7 @@ function M.update(bufnr)
   M._entries[bufnr].results = results
 
   api.nvim_buf_set_lines(display_buf, 0, -1, false, results.lines)
+  printer.print_hl_groups(bufnr, display_buf)
 end
 
 function M.attach(bufnr, lang)
