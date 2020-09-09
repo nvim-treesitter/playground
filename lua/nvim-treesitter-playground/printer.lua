@@ -86,4 +86,8 @@ function M.print_hl_groups(bufnr, display_bufnr, lang)
   iter(parser:parse():root())
 end
 
+function M.remove_hl_groups(bufnr)
+  api.nvim_buf_clear_namespace(bufnr, virt_text_id, 0, -1)
+end
+
 return M
