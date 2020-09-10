@@ -17,7 +17,7 @@ function M.parse(bufnr, query)
   local results = {}
 
   for match in ts_query.iter_prepared_matches(parsed_query, root, bufnr, start_row, end_row) do
-    locals.recurse_local_nodes(match, function(def, node, path)
+    locals.recurse_local_nodes(match, function(_, node, path)
       table.insert(results, { node = node, tag = path })
     end)
   end

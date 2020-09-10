@@ -108,6 +108,7 @@ local function setup_buf(for_buf)
   vim.cmd 'augroup END'
 
   api.nvim_buf_set_keymap(buf, 'n', 'o', string.format(':lua require "nvim-treesitter-playground.internal".toggle_query_editor(%d)<CR>', for_buf), { silent = true })
+  api.nvim_buf_set_keymap(buf, 'n', 'i', string.format(':lua require "nvim-treesitter-playground.internal".toggle_highlights(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_set_keymap(buf, 'n', 'R', string.format(':lua require "nvim-treesitter-playground.internal".update(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_set_keymap(buf, 'n', '<cr>', string.format(':lua require "nvim-treesitter-playground.internal".goto_node(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_attach(buf, false, {
@@ -445,6 +446,20 @@ function M.toggle(bufnr)
   end
 end
 
+local print_virt_hl = false
+
+function M.toggle_highlights(bufnr)
+  print_virt_hl = not print_virt_hl
+  local bufnr = bufnr or api.nvim_get_current_buf()
+  local display_buf = M._entries[bufnr].display_bufnr
+
+  if print_virt_hl then
+    printer.print_hl_groups(bufnr, display_buf)
+  else
+    printer.remove_hl_groups(display_buf)
+  end
+end
+
 function M.update(bufnr)
   local bufnr = bufnr or api.nvim_get_current_buf()
   local display_buf = M._entries[bufnr].display_bufnr
@@ -457,6 +472,9 @@ function M.update(bufnr)
   M._entries[bufnr].results = results
 
   api.nvim_buf_set_lines(display_buf, 0, -1, false, results.lines)
+  if print_virt_hl then
+    printer.print_hl_groups(bufnr, display_buf)
+  end
 end
 
 function M.attach(bufnr, lang)
