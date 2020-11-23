@@ -12,7 +12,7 @@ function M.parse(bufnr, query)
   if not success then return {} end
 
   local parser = parsers.get_parser(bufnr, lang)
-  local root = parser:parse():root()
+  local root = parser:parse()[1]:root()
   local start_row, _, end_row, _ = root:range()
   local results = {}
 
