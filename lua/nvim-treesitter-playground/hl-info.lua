@@ -18,7 +18,7 @@ function M.show_hl_captures()
   local parser = parsers.get_parser(bufnr, lang)
   if not parser then return function() end end
 
-  local root = parser:parse():root()
+  local root = parser:parse()[1]:root()
   if not root then return end
   local start_row, _, end_row, _ = root:range()
 

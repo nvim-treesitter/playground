@@ -39,7 +39,7 @@ function M.print(bufnr, lang)
 
   if not parser then return end
 
-  return print_tree(parser:parse():root())
+  return print_tree(parser:parse()[1]:root())
 end
 
 local treesitter_namespace = api.nvim_get_namespaces().treesitter_hl
@@ -83,7 +83,7 @@ function M.print_hl_groups(bufnr, display_bufnr, lang)
     end
   end
 
-  iter(parser:parse():root())
+  iter(parser:parse()[1]:root())
 end
 
 function M.remove_hl_groups(bufnr)
