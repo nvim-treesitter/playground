@@ -42,9 +42,9 @@ The tree can be toggled using the command `:TSPlaygroundToggle`.
 
 ### Keybindings
 
-- 'R': Refreshes the playground view when focused or reloads the query when the query editor is focused.
-- 'o': Toggles the query editor when the playground is focused
-- '<cr>': Go to current node in code buffer
+- `R`: Refreshes the playground view when focused or reloads the query when the query editor is focused.
+- `o`: Toggles the query editor when the playground is focused
+- `<cr>`: Go to current node in code buffer
 
 # Roadmap
   - [ ] Add interactive query highlighting
