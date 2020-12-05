@@ -63,7 +63,7 @@ function M.lint(buf)
         local node_type = ts_utils.get_node_text(node)[1]
 
         if anonymous_node then
-          node_type = node_type.sub(2, -2)
+          node_type = node_type:sub(2, -2)
         end
 
         local found =

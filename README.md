@@ -46,5 +46,21 @@ The tree can be toggled using the command `:TSPlaygroundToggle`.
 - `o`: Toggles the query editor when the playground is focused
 - `<cr>`: Go to current node in code buffer
 
+## Query Linter
+
+The playground can lint the queries for you. For that you need to activate the `query_linter` module:
+
+```lua
+require "nvim-treesitter.configs".setup {
+  query_linter = {
+    module_path = "nvim-treesitter-playground.query_linter",
+    use_virtual_text = true,
+    lint_events = {"BufWrite", "CursorHold"},
+  },
+}
+```
+
+![image](https://user-images.githubusercontent.com/7189118/101246661-06089a00-3715-11eb-9c57-6d6439defbf8.png)
+
 # Roadmap
   - [ ] Add interactive query highlighting
