@@ -74,6 +74,16 @@ function M.lint(buf)
         end
       end
     end
+
+    local field_node = utils.get_at_path(m, "field.node")
+
+    if field_node then
+      local field_name = ts_utils.get_node_text(field_node)[1]
+      local found = vim.tbl_contains(parser_info.fields, field_name)
+      if not found then
+        lint_node(field_node, buf, "Invalid Field")
+      end
+    end
   end
 end
 
