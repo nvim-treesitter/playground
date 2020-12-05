@@ -5,20 +5,23 @@ local utils = require "nvim-treesitter.utils"
 
 local hl_namespace = api.nvim_create_namespace("nvim-playground-lints")
 local ERROR_HL = "TSQueryLinterError"
+local MAGIC_NODE_NAMES = {"_", "ERROR"}
 
 local M = {}
 
 M.lints = {}
 M.use_virtual_text = true
+M.lint_events = {"BufWrite", "CursorHold"}
 
 local function lint_node(node, buf, message_prefix)
-    ts_utils.highlight_node(node, buf, hl_namespace, ERROR_HL)
-    local error_text = message_prefix..': '..table.concat(ts_utils.get_node_text(node, buf), ' ')
-    local error_range = {node:range()}
-    if M.use_virtual_text then
-      api.nvim_buf_set_virtual_text(buf, hl_namespace, error_range[1], {{error_text, ERROR_HL}}, {})
-    end
-    table.insert(M.lints[buf], { type = message_prefix, range = error_range, message = error_text })
+  ts_utils.highlight_node(node, buf, hl_namespace, ERROR_HL)
+  local node_text = table.concat(ts_utils.get_node_text(node, buf), " ")
+  local error_text = message_prefix .. ": " .. node_text
+  local error_range = {node:range()}
+  if M.use_virtual_text then
+    api.nvim_buf_set_virtual_text(buf, hl_namespace, error_range[1], {{error_text, ERROR_HL}}, {})
+  end
+  table.insert(M.lints[buf], {type = message_prefix, range = error_range, message = node_text})
 end
 
 local function table_contains(predicate, table)
@@ -51,21 +54,26 @@ function M.lint(buf)
     end
 
     if parser_info and parser_info.symbols then
-
-      --for _, p in pairs(parser_info.symbols) do
-        --D(p[1])
-      --end
-
       local named_node = utils.get_at_path(m, "named_node.node")
-      if named_node then
-        local node_type = ts_utils.get_node_text(named_node)[1]
-        local found = node_type == '_' or table_contains(function(t) return node_type == t[1]..'' end, parser_info.symbols)
+      local anonymous_node = utils.get_at_path(m, "anonymous_node.node")
+
+      if named_node or anonymous_node then
+        local node_type =
+          named_node and ts_utils.get_node_text(named_node)[1] or ts_utils.get_node_text(anonymous_node)[1]:sub(2, -2)
+        local node = named_node or anonymous_node
+        local found =
+          vim.tbl_contains(MAGIC_NODE_NAMES, node_type) or
+          table_contains(
+            function(t)
+              return node_type == t[1]
+            end,
+            parser_info.symbols
+          )
         if not found then
-          lint_node(named_node, buf, "Invalid Node Type")
+          lint_node(node, buf, "Invalid Node Type")
         end
       end
     end
-
   end
 end
 
@@ -78,20 +86,25 @@ function M.attach(buf, _)
 
   vim.cmd(string.format("augroup TreesitterPlaygroundLint_%d", buf))
   vim.cmd "au!"
-  vim.cmd(
-    string.format(
-      [[autocmd CursorHold <buffer=%d> lua require'nvim-treesitter-playground.query_linter'.lint(%d)]],
-      buf,
-      buf
+  for _, e in pairs(M.lint_events) do
+    vim.cmd(
+      string.format(
+        [[autocmd %s <buffer=%d> lua require'nvim-treesitter-playground.query_linter'.lint(%d)]],
+        e,
+        buf,
+        buf
+      )
     )
-  )
+  end
   vim.cmd "augroup END"
 end
 
 function M.detach(buf)
   M.lints[buf] = nil
   M.clear_virtual_text(buf)
-  vim.cmd(string.format("autocmd! TreesitterPlaygroundLint_%d CursorHold", buf))
+  for _, e in pairs(M.lint_events) do
+    vim.cmd(string.format("autocmd! TreesitterPlaygroundLint_%d %s", buf, e))
+  end
 end
 
 return M
