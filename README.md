@@ -48,12 +48,12 @@ The tree can be toggled using the command `:TSPlaygroundToggle`.
 
 ## Query Linter
 
-The playground can lint the queries for you. For that you need to activate the `query_linter` module:
+The playground can lint query files for you. For that, you need to activate the `query_linter` module:
 
 ```lua
 require "nvim-treesitter.configs".setup {
   query_linter = {
-    module_path = "nvim-treesitter-playground.query_linter",
+    enable = true,
     use_virtual_text = true,
     lint_events = {"BufWrite", "CursorHold"},
   },
