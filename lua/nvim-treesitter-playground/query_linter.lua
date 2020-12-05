@@ -2,6 +2,7 @@ local api = vim.api
 local queries = require "nvim-treesitter.query"
 local ts_utils = require "nvim-treesitter.ts_utils"
 local utils = require "nvim-treesitter.utils"
+local configs = require'nvim-treesitter.configs'
 
 local hl_namespace = api.nvim_create_namespace("nvim-playground-lints")
 local ERROR_HL = "TSQueryLinterError"
@@ -58,9 +59,13 @@ function M.lint(buf)
       local anonymous_node = utils.get_at_path(m, "anonymous_node.node")
 
       if named_node or anonymous_node then
-        local node_type =
-          named_node and ts_utils.get_node_text(named_node)[1] or ts_utils.get_node_text(anonymous_node)[1]:sub(2, -2)
         local node = named_node or anonymous_node
+        local node_type = ts_utils.get_node_text(node)[1]
+
+        if anonymous_node then
+          node_type = node_type.sub(2, -2)
+        end
+
         local found =
           vim.tbl_contains(MAGIC_NODE_NAMES, node_type) or
           table_contains(
@@ -93,6 +98,10 @@ end
 
 function M.attach(buf, _)
   M.lints[buf] = {}
+
+  local config = configs.get_module("query_linter")
+  M.use_virtual_text = config.use_virtual_text
+  M.lint_events = config.lint_events
 
   vim.cmd(string.format("augroup TreesitterPlaygroundLint_%d", buf))
   vim.cmd "au!"
