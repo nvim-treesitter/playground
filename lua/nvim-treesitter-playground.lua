@@ -17,7 +17,7 @@ function M.init()
       use_virtual_text = true,
       lint_events = {"BufWrite", "CursorHold"},
       is_supported = function(lang)
-        return lang == 'query' and parsers.has_parser('query')
+        return lang == "query" and parsers.has_parser("query")
       end,
     },
   }

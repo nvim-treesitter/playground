@@ -1,5 +1,6 @@
 local api = vim.api
 local queries = require "nvim-treesitter.query"
+local parsers = require "nvim-treesitter.parsers"
 local ts_utils = require "nvim-treesitter.ts_utils"
 local utils = require "nvim-treesitter.utils"
 local configs = require "nvim-treesitter.configs"
@@ -7,6 +8,7 @@ local configs = require "nvim-treesitter.configs"
 local hl_namespace = api.nvim_create_namespace("nvim-playground-lints")
 local ERROR_HL = "TSQueryLinterError"
 local MAGIC_NODE_NAMES = {"_", "ERROR"}
+local playground_module = require 'nvim-treesitter-playground.internal'
 
 local M = {}
 
@@ -36,6 +38,14 @@ local function table_contains(predicate, table)
   return false
 end
 
+local function query_lang_from_playground_buf(buf)
+  for lang_buf, entry in pairs(playground_module._entries or {}) do
+    if entry.query_bufnr == buf then
+      return parsers.get_buf_lang(lang_buf)
+    end
+  end
+end
+
 function M.lint(buf)
   buf = buf or api.nvim_get_current_buf()
   M.clear_virtual_text(buf)
@@ -45,6 +55,9 @@ function M.lint(buf)
   local ok, query_lang = pcall(vim.fn.fnamemodify, filename, ":p:h:t")
   query_lang = filename ~= "" and query_lang
   local query_lang = ok and query_lang
+  if not query_lang then
+    query_lang = query_lang_from_playground_buf(buf)
+  end
   local ok, parser_info = pcall(vim.treesitter.inspect_language, query_lang)
   local parser_info = ok and parser_info
 
