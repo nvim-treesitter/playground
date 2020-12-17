@@ -1,3 +1,4 @@
+local parsers = require 'nvim-treesitter.parsers'
 local M = {}
 
 vim.cmd [[
@@ -10,7 +11,15 @@ function M.init()
       module_path = "nvim-treesitter-playground.internal",
       updatetime = 25,
       persist_queries = false
-    }
+    },
+    query_linter = {
+      module_path = "nvim-treesitter-playground.query_linter",
+      use_virtual_text = true,
+      lint_events = {"BufWrite", "CursorHold"},
+      is_supported = function(lang)
+        return lang == "query" and parsers.has_parser("query")
+      end,
+    },
   }
 end
 
