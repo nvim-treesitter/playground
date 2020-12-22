@@ -32,6 +32,7 @@ require "nvim-treesitter.configs".setup {
     disable = {},
     updatetime = 25, -- Debounced time for highlighting nodes in the playground from source code
     persist_queries = false -- Whether the query persists across vim sessions
+    unnamed = false, -- Whether to show unnamed nodes by default
   }
 }
 ```
@@ -44,6 +45,7 @@ The tree can be toggled using the command `:TSPlaygroundToggle`.
 
 - `R`: Refreshes the playground view when focused or reloads the query when the query editor is focused.
 - `o`: Toggles the query editor when the playground is focused
+- `u`: Toggles display of unnamed nodes
 - `<cr>`: Go to current node in code buffer
 
 ## Query Linter

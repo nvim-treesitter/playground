@@ -109,6 +109,7 @@ local function setup_buf(for_buf)
 
   api.nvim_buf_set_keymap(buf, 'n', 'o', string.format(':lua require "nvim-treesitter-playground.internal".toggle_query_editor(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_set_keymap(buf, 'n', 'i', string.format(':lua require "nvim-treesitter-playground.internal".toggle_highlights(%d)<CR>', for_buf), { silent = true })
+  api.nvim_buf_set_keymap(buf, 'n', 'u', string.format(':lua require "nvim-treesitter-playground.internal".toggle_unnamed(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_set_keymap(buf, 'n', 'R', string.format(':lua require "nvim-treesitter-playground.internal".update(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_set_keymap(buf, 'n', '<cr>', string.format(':lua require "nvim-treesitter-playground.internal".goto_node(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_attach(buf, false, {
@@ -420,6 +421,9 @@ function M.open(bufnr)
   local display_buf = setup_buf(bufnr)
   local current_window = api.nvim_get_current_win()
 
+  local config = configs.get_module 'playground'
+  M._entries[bufnr].unnamed = config.unnamed
+
   M._entries[bufnr].display_bufnr = display_buf
   vim.cmd "vsplit"
   vim.cmd(string.format("buffer %d", display_buf))
@@ -460,14 +464,34 @@ function M.toggle_highlights(bufnr)
   end
 end
 
+function M.toggle_unnamed(bufnr)
+  local bufnr = bufnr or api.nvim_get_current_buf()
+  local display_buf = M._entries[bufnr].display_bufnr
+
+  M._entries[bufnr].unnamed = not M._entries[bufnr].unnamed
+
+  local node = M.get_current_node(bufnr)
+
+  M.update(bufnr)
+
+  -- restore cursor position
+  local lnums = M.highlight_playground_nodes(bufnr, { node })
+  if lnums[1] then
+    utils.for_each_buf_window(display_buf, function(window)
+      api.nvim_win_set_cursor(window, { lnums[1], 0 })
+    end)
+  end
+end
+
 function M.update(bufnr)
   local bufnr = bufnr or api.nvim_get_current_buf()
   local display_buf = M._entries[bufnr].display_bufnr
+  local unnamed = M._entries[bufnr].unnamed
 
   -- Don't bother updating if the playground isn't shown
   if not display_buf or not is_buf_visible(display_buf) then return end
 
-  local results = printer.print(bufnr)
+  local results = printer.print(bufnr, unnamed)
 
   M._entries[bufnr].results = results
 
