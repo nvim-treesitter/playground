@@ -12,6 +12,8 @@ local function print_tree(root, unnamed, results, indent)
       local name = node:type()
       if not node:named() then
         name = '"' .. name .. '"'
+        -- quote any possible newlines (newlines cause errors in nvim_buf_set_lines)
+        name = name:gsub('\n', '\\n')
       end
 
       local line
