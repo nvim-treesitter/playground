@@ -491,7 +491,7 @@ function M.update(bufnr)
   -- Don't bother updating if the playground isn't shown
   if not display_buf or not is_buf_visible(display_buf) then return end
 
-  local results = printer.print(bufnr, unnamed)
+  local results = printer.print(bufnr, nil, unnamed)
 
   M._entries[bufnr].results = results
 

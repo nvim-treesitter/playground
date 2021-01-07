@@ -11,7 +11,7 @@ function M.init()
       module_path = "nvim-treesitter-playground.internal",
       updatetime = 25,
       persist_queries = false,
-      unnamed = true,
+      unnamed = false
     },
     query_linter = {
       module_path = "nvim-treesitter-playground.query_linter",

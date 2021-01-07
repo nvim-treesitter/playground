@@ -35,7 +35,7 @@ local function print_tree(root, unnamed, results, indent)
   return results
 end
 
-function M.print(bufnr, unnamed, lang)
+function M.print(bufnr, lang, unnamed)
   local bufnr = bufnr or api.nvim_get_current_buf()
   local parser = parsers.get_parser(bufnr, lang)
 
