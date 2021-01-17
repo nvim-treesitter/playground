@@ -24,4 +24,20 @@ function M.for_each_buf_window(bufnr, fn)
   end
 end
 
+function M.to_lookup_table(list, key_mapper)
+  local result = {}
+
+  for i, v in ipairs(list) do
+    local key = v
+
+    if key_mapper then
+      key = key_mapper(v, i)
+    end
+
+    result[key] = v
+  end
+
+  return result
+end
+
 return M

@@ -39,35 +39,41 @@ local function table_contains(predicate, table)
 end
 
 local function query_lang_from_playground_buf(buf)
-  for lang_buf, entry in pairs(playground_module._entries or {}) do
+  for lang_buf, entry in pairs(playground_module.get_entries() or {}) do
     if entry.query_bufnr == buf then
+      if entry.focused_language_tree then
+        return entry.focused_language_tree:lang()
+      end
+
       return parsers.get_buf_lang(lang_buf)
     end
   end
 end
 
-function M.lint(buf)
-  buf = buf or api.nvim_get_current_buf()
-  M.clear_virtual_text(buf)
-  M.lints[buf] = {}
+function M.lint(query_buf)
+  query_buf = query_buf or api.nvim_get_current_buf()
+  M.clear_virtual_text(query_buf)
+  M.lints[query_buf] = {}
 
-  local filename = api.nvim_buf_get_name(buf)
+  local filename = api.nvim_buf_get_name(query_buf)
   local ok, query_lang = pcall(vim.fn.fnamemodify, filename, ":p:h:t")
   query_lang = filename ~= "" and query_lang
-  local query_lang = ok and query_lang
+  query_lang = ok and query_lang
   if not query_lang then
-    query_lang = query_lang_from_playground_buf(buf)
+    query_lang = query_lang_from_playground_buf(query_buf)
   end
-  local ok, parser_info = pcall(vim.treesitter.inspect_language, query_lang)
-  local parser_info = ok and parser_info
 
-  local matches = queries.get_matches(buf, "query-linter-queries")
+  local ok, parser_info = pcall(vim.treesitter.inspect_language, query_lang)
+
+  parser_info = ok and parser_info
+
+  local matches = queries.get_matches(query_buf, "query-linter-queries")
 
   for _, m in pairs(matches) do
     local error_node = utils.get_at_path(m, "error.node")
 
     if error_node then
-      lint_node(error_node, buf, "Syntax Error")
+      lint_node(error_node, query_buf, "Syntax Error")
     end
 
     local toplevel_node = utils.get_at_path(m, "toplevel-query.node")
@@ -75,7 +81,7 @@ function M.lint(buf)
       local query_text = table.concat(ts_utils.get_node_text(toplevel_node), "\n")
       local ok, err = pcall(vim.treesitter.parse_query, query_lang, query_text)
       if not ok then
-        lint_node(toplevel_node, buf, "Invalid Query", err)
+        lint_node(toplevel_node, query_buf, "Invalid Query", err)
       end
     end
 
@@ -102,7 +108,7 @@ function M.lint(buf)
           )
 
         if not found then
-          lint_node(node, buf, "Invalid Node Type")
+          lint_node(node, query_buf, "Invalid Node Type")
         end
       end
 
@@ -112,12 +118,12 @@ function M.lint(buf)
         local field_name = ts_utils.get_node_text(field_node)[1]
         local found = vim.tbl_contains(parser_info.fields, field_name)
         if not found then
-          lint_node(field_node, buf, "Invalid Field")
+          lint_node(field_node, query_buf, "Invalid Field")
         end
       end
     end
   end
-  return M.lints[buf]
+  return M.lints[query_buf]
 end
 
 function M.clear_virtual_text(buf)
