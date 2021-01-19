@@ -43,7 +43,13 @@ The tree can be toggled using the command `:TSPlaygroundToggle`.
 ### Keybindings
 
 - `R`: Refreshes the playground view when focused or reloads the query when the query editor is focused.
-- `o`: Toggles the query editor when the playground is focused
+- `o`: Toggles the query editor when the playground is focused.
+- `a`: Toggles visibility of anonymous nodes.
+- `i`: Toggles visibility of highlight groups.
+- `I`: Toggles visibility of the language the node belongs to.
+- `t`: Toggles visibility of injected languages.
+- `f`: Focuses the language tree under the cursor in the playground. The query editor will now be using the focused language.
+- `F`: Unfocuses the currently focused language.
 - `<cr>`: Go to current node in code buffer
 
 ## Query Linter
@@ -61,6 +67,3 @@ require "nvim-treesitter.configs".setup {
 ```
 
 ![image](https://user-images.githubusercontent.com/7189118/101246661-06089a00-3715-11eb-9c57-6d6439defbf8.png)
-
-# Roadmap
-  - [ ] Add interactive query highlighting

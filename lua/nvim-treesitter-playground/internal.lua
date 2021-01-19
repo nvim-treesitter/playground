@@ -1,3 +1,4 @@
+local parsers = require 'nvim-treesitter.parsers'
 local configs = require 'nvim-treesitter.configs'
 local ts_utils = require 'nvim-treesitter.ts_utils'
 local printer = require 'nvim-treesitter-playground.printer'
@@ -23,7 +24,13 @@ M._entries = setmetatable({}, {
     local entry = rawget(tbl, key)
 
     if not entry then
-      entry = {}
+      entry = {
+        include_anonymous_nodes = false,
+        suppress_injected_languages = false,
+        include_language = false,
+        include_hl_groups = false,
+        focused_language_tree = nil
+      }
       rawset(tbl, key, entry)
     end
 
@@ -35,9 +42,16 @@ local playground_ns = api.nvim_create_namespace('nvim-treesitter-playground')
 local query_hl_ns = api.nvim_create_namespace('nvim-treesitter-playground-query')
 
 local function get_node_at_cursor()
-  local success, node_at_point = pcall(function() return ts_utils.get_node_at_cursor() end)
+  local lnum, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local root_lang_tree = parsers.get_parser()
+  local owning_lang_tree = root_lang_tree:language_for_range({lnum - 1, col, lnum - 1, col})
+  local result
 
-  return success and node_at_point or nil
+  for _, tree in ipairs(owning_lang_tree:trees()) do
+    result = tree:root():named_descendant_for_range(lnum - 1, col, lnum - 1, col)
+
+    if result then return result end
+  end
 end
 
 local function focus_buf(bufnr)
@@ -88,6 +102,38 @@ local function get_update_time()
   return config and config.updatetime or 25
 end
 
+local function make_entry_toggle(property, update_fn)
+  update_fn = update_fn or function(entry)
+    entry[property] = not entry[property]
+  end
+
+  return function(bufnr)
+    bufnr = bufnr or api.nvim_get_current_buf()
+    update_fn(M._entries[bufnr])
+
+    local current_cursor = vim.api.nvim_win_get_cursor(0)
+    local node_at_cursor = M.get_current_node(bufnr)
+
+    M.update(bufnr)
+
+    -- Restore the cursor to the same node or at least the previous cursor position.
+    local cursor_pos = current_cursor
+    local node_entries = M._entries[bufnr].results
+
+    if node_at_cursor then
+      for lnum, node_entry in ipairs(node_entries) do
+        if node_entry.node:id() == node_at_cursor:id() then
+          cursor_pos = {lnum, cursor_pos[2]}
+        end
+      end
+    end
+
+    -- This could be out of bounds
+    -- TODO(steelsojka): set to end if out of bounds
+    pcall(vim.api.nvim_win_set_cursor, 0, cursor_pos)
+  end
+end
+
 local function setup_buf(for_buf)
   if M._entries[for_buf].display_bufnr then
     return M._entries[for_buf].display_bufnr
@@ -108,7 +154,12 @@ local function setup_buf(for_buf)
   vim.cmd 'augroup END'
 
   api.nvim_buf_set_keymap(buf, 'n', 'o', string.format(':lua require "nvim-treesitter-playground.internal".toggle_query_editor(%d)<CR>', for_buf), { silent = true })
-  api.nvim_buf_set_keymap(buf, 'n', 'i', string.format(':lua require "nvim-treesitter-playground.internal".toggle_highlights(%d)<CR>', for_buf), { silent = true })
+  api.nvim_buf_set_keymap(buf, 'n', 'i', string.format(':lua require "nvim-treesitter-playground.internal".toggle_hl_groups(%d)<CR>', for_buf), { silent = true })
+  api.nvim_buf_set_keymap(buf, 'n', 't', string.format(':lua require "nvim-treesitter-playground.internal".toggle_injected_languages(%d)<CR>', for_buf), { silent = true })
+  api.nvim_buf_set_keymap(buf, 'n', 'a', string.format(':lua require "nvim-treesitter-playground.internal".toggle_anonymous_nodes(%d)<CR>', for_buf), { silent = true })
+  api.nvim_buf_set_keymap(buf, 'n', 'I', string.format(':lua require "nvim-treesitter-playground.internal".toggle_language_display(%d)<CR>', for_buf), { silent = true })
+  api.nvim_buf_set_keymap(buf, 'n', 'f', string.format(':lua require "nvim-treesitter-playground.internal".focus_language(%d)<CR>', for_buf), { silent = true })
+  api.nvim_buf_set_keymap(buf, 'n', 'F', string.format(':lua require "nvim-treesitter-playground.internal".unfocus_language(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_set_keymap(buf, 'n', 'R', string.format(':lua require "nvim-treesitter-playground.internal".update(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_set_keymap(buf, 'n', '<cr>', string.format(':lua require "nvim-treesitter-playground.internal".goto_node(%d)<CR>', for_buf), { silent = true })
   api.nvim_buf_attach(buf, false, {
@@ -116,6 +167,23 @@ local function setup_buf(for_buf)
   })
 
   return buf
+end
+
+local function resolve_lang_tree(bufnr)
+  local entry = M._entries[bufnr]
+
+  if entry.focused_language_tree then
+    local root_lang_tree = parsers.get_parser(bufnr)
+    local found
+
+    root_lang_tree:for_each_child(function(lang_tree)
+      if not found and lang_tree == entry.focused_language_tree then
+        found = lang_tree
+      end
+    end)
+
+    if found then return found end
+  end
 end
 
 local function setup_query_editor(bufnr)
@@ -183,7 +251,20 @@ function M.read_saved_query(bufnr)
       :then_(function(data) return fs_close(fd)
         :then_(function() return vim.split(data, '\n') end) end)
     end)
-    :catch(function(err) return {} end)
+    :catch(function() return {} end)
+end
+
+function M.focus_language(bufnr)
+  local node_entry = M.get_current_entry(bufnr)
+
+  if not node_entry then return end
+
+  M.update(bufnr, node_entry.language_tree)
+end
+
+function M.unfocus_language(bufnr)
+  M._entries[bufnr].focused_language_tree = nil
+  M.update(bufnr)
 end
 
 function M.highlight_playground_nodes(bufnr, nodes)
@@ -192,24 +273,25 @@ function M.highlight_playground_nodes(bufnr, nodes)
   local display_buf = entry.display_bufnr
   local lines = {}
   local count = 0
+  local node_map = utils.to_lookup_table(nodes, function(node) return node:id() end)
 
   if not results or not display_buf then return end
 
-  for i, node in ipairs(results.nodes) do
-    if vim.tbl_contains(nodes, node) then
-      table.insert(lines, i)
+  for line, result in ipairs(results) do
+    if node_map[result.node:id()] then
+      table.insert(lines, line)
       count = count + 1
+    end
 
-      if count >= #nodes then
-        break
-      end
+    if count >= #nodes then
+      break
     end
   end
 
   for _, lnum in ipairs(lines) do
-    local lines = api.nvim_buf_get_lines(display_buf, lnum - 1, lnum, false)
+    local buf_lines = api.nvim_buf_get_lines(display_buf, lnum - 1, lnum, false)
 
-    if lines[1] then
+    if buf_lines[1] then
       vim.api.nvim_buf_add_highlight(display_buf, playground_ns, 'TSPlaygroundFocus', lnum - 1, 0, -1)
     end
   end
@@ -239,13 +321,17 @@ end
 
 M._highlight_playground_node_debounced = utils.debounce(M.highlight_playground_node_from_buffer, get_update_time)
 
-function M.get_current_node(bufnr)
+function M.get_current_entry(bufnr)
   local row, _ = unpack(api.nvim_win_get_cursor(0))
   local results = M._entries[bufnr].results
 
-  if not results then return end
+  return results and results[row]
+end
 
-  return results.nodes[row]
+function M.get_current_node(bufnr)
+  local entry = M.get_current_entry(bufnr)
+
+  return entry and entry.node
 end
 
 function M.highlight_node(bufnr)
@@ -289,7 +375,7 @@ end
 
 function M.update_query(bufnr, query_bufnr)
   local query = table.concat(api.nvim_buf_get_lines(query_bufnr, 0, -1, false), '\n')
-  local matches = pl_query.parse(bufnr, query)
+  local matches = pl_query.parse(bufnr, query, M._entries[bufnr].focused_language_tree)
   local capture_by_color = {}
   local index = 1
 
@@ -379,7 +465,7 @@ end
 function M.clear_highlights(bufnr, namespace)
   if not bufnr then return end
 
-  local namespace = namespace or playground_ns
+  namespace = namespace or playground_ns
 
   api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
 end
@@ -389,7 +475,8 @@ function M.clear_playground_highlights(bufnr)
 end
 
 function M.toggle_query_editor(bufnr)
-  local bufnr = bufnr or api.nvim_get_current_buf()
+  bufnr = bufnr or api.nvim_get_current_buf()
+
   local display_buf = M._entries[bufnr].display_bufnr
   local current_win = api.nvim_get_current_win()
 
@@ -416,7 +503,8 @@ function M.toggle_query_editor(bufnr)
 end
 
 function M.open(bufnr)
-  local bufnr = bufnr or api.nvim_get_current_buf()
+  bufnr = bufnr or api.nvim_get_current_buf()
+
   local display_buf = setup_buf(bufnr)
   local current_window = api.nvim_get_current_win()
 
@@ -435,7 +523,8 @@ function M.open(bufnr)
 end
 
 function M.toggle(bufnr)
-  local bufnr = bufnr or api.nvim_get_current_buf()
+  bufnr = bufnr or api.nvim_get_current_buf()
+
   local display_buf = M._entries[bufnr].display_bufnr
 
   if display_buf and is_buf_visible(display_buf) then
@@ -446,38 +535,55 @@ function M.toggle(bufnr)
   end
 end
 
-local print_virt_hl = false
+M.toggle_anonymous_nodes = make_entry_toggle("include_anonymous_nodes")
+M.toggle_injected_languages = make_entry_toggle("suppress_injected_languages")
+M.toggle_hl_groups = make_entry_toggle("include_hl_groups")
+M.toggle_language_display = make_entry_toggle("include_language")
 
-function M.toggle_highlights(bufnr)
-  print_virt_hl = not print_virt_hl
-  local bufnr = bufnr or api.nvim_get_current_buf()
-  local display_buf = M._entries[bufnr].display_bufnr
+function M.update(bufnr, lang_tree)
+  bufnr = bufnr or api.nvim_get_current_buf()
+  lang_tree = lang_tree or resolve_lang_tree(bufnr)
 
-  if print_virt_hl then
-    printer.print_hl_groups(bufnr, display_buf)
+  local entry = M._entries[bufnr]
+  local display_buf = entry.display_bufnr
+
+  -- Don't bother updating if the playground isn't shown
+  if not display_buf or not is_buf_visible(display_buf) then return end
+
+  entry.focused_language_tree = lang_tree
+
+  local results = printer.process(bufnr, lang_tree, {
+    include_anonymous_nodes = entry.include_anonymous_nodes,
+    suppress_injected_languages = entry.suppress_injected_languages,
+    include_hl_groups = entry.include_hl_groups
+  })
+
+  M._entries[bufnr].results = results
+
+  api.nvim_buf_set_lines(display_buf, 0, -1, false, printer.print_entries(results))
+
+  if entry.query_bufnr then
+    M.update_query(bufnr, entry.query_bufnr)
+  end
+
+  if entry.include_language then
+    printer.print_language(display_buf, results)
+  else
+    printer.remove_language(display_buf)
+  end
+
+  if entry.include_hl_groups then
+    printer.print_hl_groups(display_buf, results)
   else
     printer.remove_hl_groups(display_buf)
   end
 end
 
-function M.update(bufnr)
-  local bufnr = bufnr or api.nvim_get_current_buf()
-  local display_buf = M._entries[bufnr].display_bufnr
-
-  -- Don't bother updating if the playground isn't shown
-  if not display_buf or not is_buf_visible(display_buf) then return end
-
-  local results = printer.print(bufnr)
-
-  M._entries[bufnr].results = results
-
-  api.nvim_buf_set_lines(display_buf, 0, -1, false, results.lines)
-  if print_virt_hl then
-    printer.print_hl_groups(bufnr, display_buf)
-  end
+function M.get_entries()
+  return M._entries
 end
 
-function M.attach(bufnr, lang)
+function M.attach(bufnr)
   api.nvim_buf_attach(bufnr, true, {
     on_lines = vim.schedule_wrap(function() M.update(bufnr) end)
   })
