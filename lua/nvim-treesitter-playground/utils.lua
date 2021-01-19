@@ -40,4 +40,12 @@ function M.to_lookup_table(list, key_mapper)
   return result
 end
 
+function M.node_contains(node, range)
+  local start_row, start_col, end_row, end_col = node:range()
+  local start_fits = start_row < range[1] or (start_row == range[1] and start_col <= range[2])
+  local end_fits = end_row > range[3] or (end_row == range[3] and end_col >= range[4])
+
+  return start_fits and end_fits
+end
+
 return M

@@ -48,9 +48,13 @@ local function get_node_at_cursor()
   local result
 
   for _, tree in ipairs(owning_lang_tree:trees()) do
-    result = tree:root():named_descendant_for_range(lnum - 1, col, lnum - 1, col)
+    local range = {lnum - 1, col, lnum - 1, col}
 
-    if result then return result end
+    if utils.node_contains(tree:root(), range) then
+      result = tree:root():descendant_for_range(unpack(range))
+
+      if result then return result end
+    end
   end
 end
 
