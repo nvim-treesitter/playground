@@ -106,8 +106,10 @@ local function get_update_time()
   return config and config.updatetime or 25
 end
 
-local function make_entry_toggle(property, update_fn)
-  update_fn = update_fn or function(entry)
+local function make_entry_toggle(property, options)
+  options = options or {}
+
+  local update_fn = options.update_fn or function(entry)
     entry[property] = not entry[property]
   end
 
@@ -118,7 +120,11 @@ local function make_entry_toggle(property, update_fn)
     local current_cursor = vim.api.nvim_win_get_cursor(0)
     local node_at_cursor = M.get_current_node(bufnr)
 
-    M.update(bufnr)
+    if options.reprocess then
+      M.update(bufnr)
+    else
+      M.render(bufnr)
+    end
 
     -- Restore the cursor to the same node or at least the previous cursor position.
     local cursor_pos = current_cursor
@@ -539,9 +545,9 @@ function M.toggle(bufnr)
   end
 end
 
-M.toggle_anonymous_nodes = make_entry_toggle("include_anonymous_nodes")
-M.toggle_injected_languages = make_entry_toggle("suppress_injected_languages")
-M.toggle_hl_groups = make_entry_toggle("include_hl_groups")
+M.toggle_anonymous_nodes = make_entry_toggle("include_anonymous_nodes", { reprocess = true })
+M.toggle_injected_languages = make_entry_toggle("suppress_injected_languages", { reprocess = true })
+M.toggle_hl_groups = make_entry_toggle("include_hl_groups", { reprocess = true })
 M.toggle_language_display = make_entry_toggle("include_language")
 
 function M.update(bufnr, lang_tree)
@@ -563,21 +569,32 @@ function M.update(bufnr, lang_tree)
   })
 
   M._entries[bufnr].results = results
+  M.render(bufnr)
+end
 
-  api.nvim_buf_set_lines(display_buf, 0, -1, false, printer.print_entries(results))
+function M.render(bufnr)
+  bufnr = bufnr or api.nvim_get_current_buf()
+
+  local entry = M._entries[bufnr]
+  local display_buf = entry.display_bufnr
+
+  -- Don't bother updating if the playground isn't shown
+  if not display_buf or not is_buf_visible(display_buf) then return end
+
+  api.nvim_buf_set_lines(display_buf, 0, -1, false, printer.print_entries(entry.results))
 
   if entry.query_bufnr then
     M.update_query(bufnr, entry.query_bufnr)
   end
 
   if entry.include_language then
-    printer.print_language(display_buf, results)
+    printer.print_language(display_buf, entry.results)
   else
     printer.remove_language(display_buf)
   end
 
   if entry.include_hl_groups then
-    printer.print_hl_groups(display_buf, results)
+    printer.print_hl_groups(display_buf, entry.results)
   else
     printer.remove_hl_groups(display_buf)
   end
@@ -589,7 +606,9 @@ end
 
 function M.attach(bufnr)
   api.nvim_buf_attach(bufnr, true, {
-    on_lines = vim.schedule_wrap(function() M.update(bufnr) end)
+    on_lines = vim.schedule_wrap(utils.debounce(function()
+      M.update(bufnr)
+    end, get_update_time))
   })
 
   vim.cmd(string.format('augroup TreesitterPlayground_%d', bufnr))
