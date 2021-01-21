@@ -44,6 +44,10 @@ local query_hl_ns = api.nvim_create_namespace('nvim-treesitter-playground-query'
 local function get_node_at_cursor()
   local lnum, col = unpack(vim.api.nvim_win_get_cursor(0))
   local root_lang_tree = parsers.get_parser()
+
+  -- This can happen in some scenarios... best not assume.
+  if not root_lang_tree then return end
+
   local owning_lang_tree = root_lang_tree:language_for_range({lnum - 1, col, lnum - 1, col})
   local result
 
