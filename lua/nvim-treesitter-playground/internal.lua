@@ -41,7 +41,10 @@ M._entries = setmetatable({}, {
 local playground_ns = api.nvim_create_namespace('nvim-treesitter-playground')
 local query_hl_ns = api.nvim_create_namespace('nvim-treesitter-playground-query')
 
-local function get_node_at_cursor()
+local function get_node_at_cursor(options)
+  options = options or {}
+
+  local include_anonymous = options.include_anonymous
   local lnum, col = unpack(vim.api.nvim_win_get_cursor(0))
   local root_lang_tree = parsers.get_parser()
 
@@ -55,7 +58,11 @@ local function get_node_at_cursor()
     local range = {lnum - 1, col, lnum - 1, col}
 
     if utils.node_contains(tree:root(), range) then
-      result = tree:root():descendant_for_range(unpack(range))
+      if include_anonymous then
+        result = tree:root():descendant_for_range(unpack(range))
+      else
+        result = tree:root():named_descendant_for_range(unpack(range))
+      end
 
       if result then return result end
     end
@@ -316,11 +323,12 @@ end
 function M.highlight_playground_node_from_buffer(bufnr)
   M.clear_playground_highlights(bufnr)
 
-  local display_buf = M._entries[bufnr].display_bufnr
+  local entry = M._entries[bufnr]
+  local display_buf = entry.display_bufnr
 
   if not display_buf then return end
 
-  local node_at_point = get_node_at_cursor()
+  local node_at_point = get_node_at_cursor({ include_anonymous = entry.include_anonymous_nodes })
 
   if not node_at_point then return end
 
@@ -454,7 +462,7 @@ function M.highlight_matched_query_nodes_from_capture(bufnr, capture)
 end
 
 function M.on_query_cursor_move(bufnr)
-  local node_at_point = get_node_at_cursor()
+  local node_at_point = get_node_at_cursor({ include_anonymous = false })
   local captures = M._entries[bufnr].captures
 
   M.clear_highlights(bufnr)
