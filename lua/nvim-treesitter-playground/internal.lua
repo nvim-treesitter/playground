@@ -38,6 +38,7 @@ M._entries = setmetatable({}, {
   end
 })
 
+local query_buf_var_name = 'TSPlaygroundForBuf'
 local playground_ns = api.nvim_create_namespace('nvim-treesitter-playground')
 local query_hl_ns = api.nvim_create_namespace('nvim-treesitter-playground-query')
 
@@ -159,6 +160,7 @@ local function setup_buf(for_buf)
   api.nvim_buf_set_option(buf, 'swapfile', false)
   api.nvim_buf_set_option(buf, 'buflisted', false)
   api.nvim_buf_set_option(buf, 'filetype', 'tsplayground')
+  api.nvim_buf_set_var(buf, query_buf_var_name, for_buf)
 
   vim.cmd(string.format('augroup TreesitterPlayground_%d', buf))
   vim.cmd 'au!'
@@ -211,6 +213,7 @@ local function setup_query_editor(bufnr)
   api.nvim_buf_set_option(buf, 'swapfile', false)
   api.nvim_buf_set_option(buf, 'buflisted', false)
   api.nvim_buf_set_option(buf, 'filetype', 'query')
+  api.nvim_buf_set_var(buf, query_buf_var_name, bufnr)
 
   vim.cmd(string.format([[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.on_query_cursor_move(%d)]], buf, bufnr))
 
@@ -538,6 +541,12 @@ end
 
 function M.toggle(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
+
+  local success, for_buf = pcall(api.nvim_buf_get_var, bufnr, query_buf_var_name)
+
+  if success and for_buf then
+    bufnr = for_buf
+  end
 
   local display_buf = M._entries[bufnr].display_bufnr
 
