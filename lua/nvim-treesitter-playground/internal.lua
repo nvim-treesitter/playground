@@ -176,15 +176,11 @@ local function setup_buf(for_buf)
   vim.cmd(string.format([[autocmd BufWinEnter <buffer=%d> lua require'nvim-treesitter-playground.internal'.update(%d)]], buf, for_buf))
   vim.cmd 'augroup END'
 
-  api.nvim_buf_set_keymap(buf, 'n', 'o', string.format(':lua require "nvim-treesitter-playground.internal".toggle_query_editor(%d)<CR>', for_buf), { silent = true })
-  api.nvim_buf_set_keymap(buf, 'n', 'i', string.format(':lua require "nvim-treesitter-playground.internal".toggle_hl_groups(%d)<CR>', for_buf), { silent = true })
-  api.nvim_buf_set_keymap(buf, 'n', 't', string.format(':lua require "nvim-treesitter-playground.internal".toggle_injected_languages(%d)<CR>', for_buf), { silent = true })
-  api.nvim_buf_set_keymap(buf, 'n', 'a', string.format(':lua require "nvim-treesitter-playground.internal".toggle_anonymous_nodes(%d)<CR>', for_buf), { silent = true })
-  api.nvim_buf_set_keymap(buf, 'n', 'I', string.format(':lua require "nvim-treesitter-playground.internal".toggle_language_display(%d)<CR>', for_buf), { silent = true })
-  api.nvim_buf_set_keymap(buf, 'n', 'f', string.format(':lua require "nvim-treesitter-playground.internal".focus_language(%d)<CR>', for_buf), { silent = true })
-  api.nvim_buf_set_keymap(buf, 'n', 'F', string.format(':lua require "nvim-treesitter-playground.internal".unfocus_language(%d)<CR>', for_buf), { silent = true })
-  api.nvim_buf_set_keymap(buf, 'n', 'R', string.format(':lua require "nvim-treesitter-playground.internal".update(%d)<CR>', for_buf), { silent = true })
-  api.nvim_buf_set_keymap(buf, 'n', '<cr>', string.format(':lua require "nvim-treesitter-playground.internal".goto_node(%d)<CR>', for_buf), { silent = true })
+  local config = configs.get_module("playground")
+
+  for func, mapping in pairs(config.keybindings) do
+    api.nvim_buf_set_keymap(buf, 'n', mapping, string.format(':lua require "nvim-treesitter-playground.internal".%s(%d)<CR>', func, for_buf), { silent = true })
+  end
   api.nvim_buf_attach(buf, false, {
     on_detach = function() clear_entry(for_buf) end
   })
@@ -619,6 +615,15 @@ function M.render(bufnr)
   else
     printer.remove_hl_groups(display_buf)
   end
+end
+
+function M.show_help()
+  local function filter(item, path)
+      if path[#path] == vim.inspect.METATABLE then return end
+      return item
+    end
+  print("Current keybindings:")
+  print(vim.inspect(configs.get_module('playground').keybindings, {process=filter}))
 end
 
 function M.get_entries()
