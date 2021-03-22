@@ -6,7 +6,19 @@ function M.init()
     playground = {
       module_path = "nvim-treesitter-playground.internal",
       updatetime = 25,
-      persist_queries = false
+      persist_queries = false,
+      keybindings = {
+        toggle_query_editor = 'o',
+        toggle_hl_groups = 'i',
+        toggle_injected_languages = 't',
+        toggle_anonymous_nodes = 'a',
+        toggle_language_display = 'I',
+        focus_language = 'f',
+        unfocus_language = 'F',
+        update = 'R',
+        goto_node = '<cr>',
+        show_help = '?',
+      },
     },
     query_linter = {
       module_path = "nvim-treesitter-playground.query_linter",
