@@ -178,8 +178,8 @@ local function setup_buf(for_buf)
 
   local config = configs.get_module("playground")
 
-  for k, v in pairs(config.keybindings) do
-    api.nvim_buf_set_keymap(buf, 'n', v, string.format(':lua require "nvim-treesitter-playground.internal".%s(%d)<CR>', k, for_buf), { silent = true })
+  for func, mapping in pairs(config.keybindings) do
+    api.nvim_buf_set_keymap(buf, 'n', mapping, string.format(':lua require "nvim-treesitter-playground.internal".%s(%d)<CR>', func, for_buf), { silent = true })
   end
   api.nvim_buf_attach(buf, false, {
     on_detach = function() clear_entry(for_buf) end
@@ -619,9 +619,9 @@ end
 
 function M.show_help()
   local function filter(item, path)
-      if path[#path] == vim.inspect.METATABLE then return end
-      return item
-    end
+    if path[#path] == vim.inspect.METATABLE then return end
+    return item
+  end
   print("Current keybindings:")
   print(vim.inspect(configs.get_module('playground').keybindings, {process=filter}))
 end
