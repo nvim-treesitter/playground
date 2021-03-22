@@ -619,9 +619,9 @@ end
 
 function M.show_help()
   local function filter(item, path)
-      if path[#path] == vim.inspect.METATABLE then return end
-      return item
-    end
+    if path[#path] == vim.inspect.METATABLE then return end
+    return item
+  end
   print("Current keybindings:")
   print(vim.inspect(configs.get_module('playground').keybindings, {process=filter}))
 end
