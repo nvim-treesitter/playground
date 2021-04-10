@@ -50,18 +50,23 @@ local function query_lang_from_playground_buf(buf)
   end
 end
 
+function M.guess_query_lang(buf)
+  local filename = api.nvim_buf_get_name(buf)
+  local ok, query_lang = pcall(vim.fn.fnamemodify, filename, ":p:h:t")
+  query_lang = filename ~= "" and query_lang
+  query_lang = ok and query_lang
+  if not query_lang then
+    query_lang = query_lang_from_playground_buf(buf)
+  end
+  return query_lang
+end
+
 function M.lint(query_buf)
   query_buf = query_buf or api.nvim_get_current_buf()
   M.clear_virtual_text(query_buf)
   M.lints[query_buf] = {}
 
-  local filename = api.nvim_buf_get_name(query_buf)
-  local ok, query_lang = pcall(vim.fn.fnamemodify, filename, ":p:h:t")
-  query_lang = filename ~= "" and query_lang
-  query_lang = ok and query_lang
-  if not query_lang then
-    query_lang = query_lang_from_playground_buf(query_buf)
-  end
+  local query_lang = M.guess_query_lang(query_buf)
 
   local ok, parser_info = pcall(vim.treesitter.inspect_language, query_lang)
 
