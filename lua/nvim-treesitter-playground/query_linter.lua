@@ -93,7 +93,7 @@ function M.lint(query_buf)
         local node_type = ts_utils.get_node_text(node)[1]
 
         if anonymous_node then
-          node_type = node_type:gsub('"(.*)".*$', "%1")
+          node_type = node_type:gsub('"(.*)".*$', "%1"):gsub('\\(.)', '%1')
         end
 
         local is_named = named_node ~= nil
