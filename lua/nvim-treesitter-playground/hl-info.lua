@@ -6,6 +6,11 @@ local hlmap = vim.treesitter.highlighter.hl_map
 
 local M = {}
 
+local function is_highlight_name(capture_name)
+  local firstc = string.sub(capture_name, 1, 1)
+  return firstc ~= string.lower(firstc)
+end
+
 function M.show_hl_captures()
   local bufnr = vim.api.nvim_get_current_buf()
   local lang = parsers.get_buf_lang(bufnr)
@@ -32,7 +37,7 @@ function M.show_hl_captures()
         if ts_utils.is_in_node_range(node, row, col) then
           local c = query.captures[id] -- name of the capture in the query
           if c ~= nil then
-            table.insert(matches, '@'..c..' -> '..(hlmap[c] or 'nil'))
+            table.insert(matches, '@'..c..' -> '..(is_highlight_name(c) and c or (hlmap[c] or 'nil')))
           end
         end
       end
