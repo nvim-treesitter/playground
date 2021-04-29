@@ -30,10 +30,7 @@ function M.get_treesitter_hl()
 
     local iter = query:query():iter_captures(root, self.bufnr, row, row + 1)
 
-    while true do
-      local capture, node = iter()
-      if capture == nil then break end
-
+    for capture, node in iter do
       local hl = query.hl_cache[capture]
 
       if hl and ts_utils.is_in_node_range(node, row, col) then
