@@ -36,8 +36,12 @@ function M.get_treesitter_hl()
       if hl and ts_utils.is_in_node_range(node, row, col) then
         local c = query._query.captures[capture] -- name of the capture in the query
         if c ~= nil then
-          table.insert(matches, "* **@" .. c .. "** -> " .. hl .. " -> **" ..
-                         query:_get_hl_from_capture(capture) .. "**")
+          local general_hl = query:_get_hl_from_capture(capture)
+          local line = "* **@" .. c .. "** -> " .. hl
+          if general_hl ~= hl then
+            line = line .. " -> **" .. general_hl .. "**"
+          end
+          table.insert(matches, line)
         end
       end
     end
