@@ -79,3 +79,12 @@ require "nvim-treesitter.configs".setup {
 ```
 
 ![image](https://user-images.githubusercontent.com/7189118/101246661-06089a00-3715-11eb-9c57-6d6439defbf8.png)
+
+## Show treesitter and syntax highlight groups under the cursor 
+
+The playground comes with `:TSHighlightCapturesUnderCursor` that shows any treesitter highlight or syntax groups under the cursor.
+
+![image](https://user-images.githubusercontent.com/292349/119982982-6665ef00-bf74-11eb-93d5-9b214928c3a9.png)
+
+![image](https://user-images.githubusercontent.com/292349/119983093-8c8b8f00-bf74-11eb-9fa2-3670a8253fbd.png)
+
