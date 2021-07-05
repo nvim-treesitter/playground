@@ -285,6 +285,11 @@ local function setup_query_editor(bufnr)
         api.nvim_buf_set_lines(buf, 0, -1, false, lines)
       end
     end))
+  else
+    api.nvim_buf_set_lines(buf, 0, -1, false, {
+      ";; Write your query here like `(node) @capture`,",
+      ";; put the cursor under the capture to highlight the matches.",
+    })
   end
 
   return buf
