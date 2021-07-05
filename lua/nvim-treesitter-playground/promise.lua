@@ -3,10 +3,12 @@ local luv = vim.loop
 
 function M.promisify(fn)
   return function(...)
-    local args = {...}
+    local args = { ... }
     return M.new(function(resolve, reject)
       table.insert(args, function(err, v)
-        if err then return reject(err) end
+        if err then
+          return reject(err)
+        end
 
         resolve(v)
       end)
@@ -35,16 +37,24 @@ function M.new(sink)
     is_errored = false,
     cbs = {},
     err_cbs = {},
-  }, { __index = M })
+  }, {
+    __index = M,
+  })
 
-  p._resolve = function(v) p:_set_result(v, false) end
-  p._reject = function(err) p:_set_result(err, true) end
+  p._resolve = function(v)
+    p:_set_result(v, false)
+  end
+  p._reject = function(err)
+    p:_set_result(err, true)
+  end
 
   local success, err = pcall(function()
     sink(p._resolve, p._reject)
   end)
 
-  if not success then p._reject(err) end
+  if not success then
+    p._reject(err)
+  end
 
   return p
 end
@@ -58,9 +68,13 @@ function M:then_(on_success, on_error)
         return resolve(result)
       end
 
-      local success, res = pcall(function() resolve(on_success(result)) end)
+      local success, res = pcall(function()
+        resolve(on_success(result))
+      end)
 
-      if not success then reject(res) end
+      if not success then
+        reject(res)
+      end
 
       return res
     end)
@@ -70,9 +84,13 @@ function M:then_(on_success, on_error)
         return reject(result)
       end
 
-      local success, res = pcall(function() resolve(on_error(result)) end)
+      local success, res = pcall(function()
+        resolve(on_error(result))
+      end)
 
-      if not success then reject(res) end
+      if not success then
+        reject(res)
+      end
 
       return res
     end)
@@ -128,7 +146,7 @@ function M:_set_result(result, errored)
 end
 
 function M.is_promise(v)
-  return type(v) == 'table' and type(v.then_) == 'function'
+  return type(v) == "table" and type(v.then_) == "function"
 end
 
 return M

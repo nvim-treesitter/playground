@@ -1,11 +1,11 @@
-local parsers = require 'nvim-treesitter.parsers'
-local utils = require 'nvim-treesitter-playground.utils'
+local parsers = require "nvim-treesitter.parsers"
+local utils = require "nvim-treesitter-playground.utils"
 local api = vim.api
 
 local M = {}
 local treesitter_namespace = api.nvim_get_namespaces()["treesitter/highlighter"]
-local virt_text_id = api.nvim_create_namespace('TSPlaygroundHlGroups')
-local lang_virt_text_id = api.nvim_create_namespace('TSPlaygroundLangGroups')
+local virt_text_id = api.nvim_create_namespace "TSPlaygroundHlGroups"
+local lang_virt_text_id = api.nvim_create_namespace "TSPlaygroundLangGroups"
 
 local function get_extmarks(bufnr, start, end_)
   return api.nvim_buf_get_extmarks(bufnr, treesitter_namespace, start, end_, { details = true })
@@ -13,7 +13,7 @@ end
 
 local function get_hl_group_for_node(bufnr, node)
   local start_row, start_col, end_row, end_col = node:range()
-  local extmarks = get_extmarks(bufnr, {start_row, start_col}, {end_row, end_col})
+  local extmarks = get_extmarks(bufnr, { start_row, start_col }, { end_row, end_col })
   local groups = {}
 
   if #extmarks > 0 then
@@ -36,10 +36,7 @@ local function flatten_node(root, results, level, language_tree, options)
         node = node,
         field = field,
         language_tree = language_tree,
-        hl_groups = options.include_hl_groups
-          and options.bufnr
-          and get_hl_group_for_node(options.bufnr, node)
-          or {}
+        hl_groups = options.include_hl_groups and options.bufnr and get_hl_group_for_node(options.bufnr, node) or {},
       }
 
       table.insert(results, node_entry)
@@ -60,7 +57,7 @@ local function flatten_lang_tree(lang_tree, results, options)
     local head_entry_index = nil
 
     for i, node_entry in ipairs(results) do
-      local is_contained = utils.node_contains(node_entry.node, {root:range()})
+      local is_contained = utils.node_contains(node_entry.node, { root:range() })
 
       if is_contained then
         if not head_entry then
@@ -107,7 +104,9 @@ function M.process(bufnr, lang_tree, options)
   lang_tree = lang_tree or parsers.get_parser(bufnr)
   options.bufnr = options.bufnr or bufnr
 
-  if not lang_tree then return {} end
+  if not lang_tree then
+    return {}
+  end
 
   return flatten_lang_tree(lang_tree, nil, options)
 end
@@ -125,16 +124,9 @@ function M.print_entry(node_entry)
   end
 
   if field then
-    line = string.format("%s%s: %s [%d, %d] - [%d, %d]",
-      indent,
-      field,
-      node_name,
-      node:range())
+    line = string.format("%s%s: %s [%d, %d] - [%d, %d]", indent, field, node_name, node:range())
   else
-    line = string.format("%s%s [%d, %d] - [%d, %d]",
-      indent,
-      node_name,
-      node:range())
+    line = string.format("%s%s [%d, %d] - [%d, %d]", indent, node_name, node:range())
   end
 
   return line
@@ -161,7 +153,7 @@ function M.print_hl_groups(bufnr, node_entries)
         str = string.sub(str, 0, -3)
       end
 
-      table.insert(groups, {str, hl_group})
+      table.insert(groups, { str, hl_group })
     end
 
     api.nvim_buf_set_virtual_text(bufnr, virt_text_id, i, groups, {})
@@ -170,7 +162,7 @@ end
 
 function M.print_language(bufnr, node_entries)
   for i, node_entry in ipairs(node_entries) do
-    api.nvim_buf_set_virtual_text(bufnr, lang_virt_text_id, i - 1, {{node_entry.language_tree:lang()}}, {})
+    api.nvim_buf_set_virtual_text(bufnr, lang_virt_text_id, i - 1, { { node_entry.language_tree:lang() } }, {})
   end
 end
 

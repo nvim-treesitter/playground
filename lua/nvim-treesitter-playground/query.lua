@@ -1,6 +1,6 @@
-local ts_query = require 'nvim-treesitter.query'
-local parsers = require 'nvim-treesitter.parsers'
-local locals = require 'nvim-treesitter.locals'
+local ts_query = require "nvim-treesitter.query"
+local parsers = require "nvim-treesitter.parsers"
+local locals = require "nvim-treesitter.locals"
 
 local M = {}
 
@@ -11,7 +11,9 @@ function M.parse(bufnr, query, lang_tree)
     return vim.treesitter.parse_query(lang_tree:lang(), query)
   end)
 
-  if not success then return {} end
+  if not success then
+    return {}
+  end
 
   local results = {}
 
