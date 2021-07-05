@@ -58,7 +58,7 @@ function M.guess_query_lang(buf)
   if not query_lang then
     query_lang = query_lang_from_playground_buf(buf)
   end
-  return query_lang
+  return parsers.ft_to_lang(query_lang)
 end
 
 function M.lint(query_buf)
