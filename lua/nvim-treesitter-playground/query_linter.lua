@@ -84,7 +84,8 @@ function M.lint(query_buf)
     local toplevel_node = utils.get_at_path(m, "toplevel-query.node")
     if toplevel_node and query_lang then
       local query_text = table.concat(ts_utils.get_node_text(toplevel_node), "\n")
-      local ok, err = pcall(vim.treesitter.parse_query, query_lang, query_text)
+      local err
+      ok, err = pcall(vim.treesitter.parse_query, query_lang, query_text)
       if not ok then
         lint_node(toplevel_node, query_buf, "Invalid Query", err)
       end

@@ -733,13 +733,12 @@ function M.attach(bufnr)
 
   vim.cmd(string.format("augroup TreesitterPlayground_%d", bufnr))
   vim.cmd "au!"
-  vim.cmd(
-    string.format(
-      [[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'._highlight_playground_node_debounced(%d)]],
-      bufnr,
-      bufnr
-    )
-  )
+  vim.cmd(string.format(
+    -- luacheck: no max line length
+    [[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'._highlight_playground_node_debounced(%d)]],
+    bufnr,
+    bufnr
+  ))
   vim.cmd(
     string.format(
       [[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_playground_highlights(%d)]],
