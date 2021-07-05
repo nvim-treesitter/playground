@@ -5,16 +5,16 @@ local ts_utils = require "nvim-treesitter.ts_utils"
 local utils = require "nvim-treesitter.utils"
 local configs = require "nvim-treesitter.configs"
 
-local hl_namespace = api.nvim_create_namespace("nvim-playground-lints")
+local hl_namespace = api.nvim_create_namespace "nvim-playground-lints"
 local ERROR_HL = "TSQueryLinterError"
-local MAGIC_NODE_NAMES = {"_", "ERROR"}
-local playground_module = require 'nvim-treesitter-playground.internal'
+local MAGIC_NODE_NAMES = { "_", "ERROR" }
+local playground_module = require "nvim-treesitter-playground.internal"
 
 local M = {}
 
 M.lints = {}
 M.use_virtual_text = true
-M.lint_events = {"BufWrite", "CursorHold"}
+M.lint_events = { "BufWrite", "CursorHold" }
 
 local function lint_node(node, buf, error_type, complete_message)
   if error_type ~= "Invalid Query" then
@@ -22,11 +22,11 @@ local function lint_node(node, buf, error_type, complete_message)
   end
   local node_text = table.concat(ts_utils.get_node_text(node, buf), " ")
   local error_text = complete_message or error_type .. ": " .. node_text
-  local error_range = {node:range()}
+  local error_range = { node:range() }
   if M.use_virtual_text then
-    api.nvim_buf_set_virtual_text(buf, hl_namespace, error_range[1], {{error_text, ERROR_HL}}, {})
+    api.nvim_buf_set_virtual_text(buf, hl_namespace, error_range[1], { { error_text, ERROR_HL } }, {})
   end
-  table.insert(M.lints[buf], {type = error_type, range = error_range, message = error_text, node_text = node_text})
+  table.insert(M.lints[buf], { type = error_type, range = error_range, message = error_text, node_text = node_text })
 end
 
 local function table_contains(predicate, table)
@@ -98,19 +98,15 @@ function M.lint(query_buf)
         local node_type = ts_utils.get_node_text(node)[1]
 
         if anonymous_node then
-          node_type = node_type:gsub('"(.*)".*$', "%1"):gsub('\\(.)', '%1')
+          node_type = node_type:gsub('"(.*)".*$', "%1"):gsub("\\(.)", "%1")
         end
 
         local is_named = named_node ~= nil
 
-        local found =
-          vim.tbl_contains(MAGIC_NODE_NAMES, node_type) or
-          table_contains(
-            function(t)
-              return node_type == t[1] and is_named == t[2]
-            end,
-            parser_info.symbols
-          )
+        local found = vim.tbl_contains(MAGIC_NODE_NAMES, node_type)
+          or table_contains(function(t)
+            return node_type == t[1] and is_named == t[2]
+          end, parser_info.symbols)
 
         if not found then
           lint_node(node, query_buf, "Invalid Node Type")
@@ -138,7 +134,7 @@ end
 function M.attach(buf, _)
   M.lints[buf] = {}
 
-  local config = configs.get_module("query_linter")
+  local config = configs.get_module "query_linter"
   M.use_virtual_text = config.use_virtual_text
   M.lint_events = config.lint_events
 

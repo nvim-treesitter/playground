@@ -1,11 +1,11 @@
-local parsers = require 'nvim-treesitter.parsers'
-local configs = require 'nvim-treesitter.configs'
-local ts_utils = require 'nvim-treesitter.ts_utils'
-local printer = require 'nvim-treesitter-playground.printer'
-local utils = require 'nvim-treesitter-playground.utils'
-local ts_query = require 'nvim-treesitter.query'
-local pl_query = require 'nvim-treesitter-playground.query'
-local Promise = require 'nvim-treesitter-playground.promise'
+local parsers = require "nvim-treesitter.parsers"
+local configs = require "nvim-treesitter.configs"
+local ts_utils = require "nvim-treesitter.ts_utils"
+local printer = require "nvim-treesitter-playground.printer"
+local utils = require "nvim-treesitter-playground.utils"
+local ts_query = require "nvim-treesitter.query"
+local pl_query = require "nvim-treesitter-playground.query"
+local Promise = require "nvim-treesitter-playground.promise"
 local api = vim.api
 local luv = vim.loop
 
@@ -29,18 +29,18 @@ M._entries = setmetatable({}, {
         suppress_injected_languages = false,
         include_language = false,
         include_hl_groups = false,
-        focused_language_tree = nil
+        focused_language_tree = nil,
       }
       rawset(tbl, key, entry)
     end
 
     return entry
-  end
+  end,
 })
 
-local query_buf_var_name = 'TSPlaygroundForBuf'
-local playground_ns = api.nvim_create_namespace('nvim-treesitter-playground')
-local query_hl_ns = api.nvim_create_namespace('nvim-treesitter-playground-query')
+local query_buf_var_name = "TSPlaygroundForBuf"
+local playground_ns = api.nvim_create_namespace "nvim-treesitter-playground"
+local query_hl_ns = api.nvim_create_namespace "nvim-treesitter-playground-query"
 
 local function get_node_at_cursor(options)
   options = options or {}
@@ -50,13 +50,15 @@ local function get_node_at_cursor(options)
   local root_lang_tree = parsers.get_parser()
 
   -- This can happen in some scenarios... best not assume.
-  if not root_lang_tree then return end
+  if not root_lang_tree then
+    return
+  end
 
-  local owning_lang_tree = root_lang_tree:language_for_range({lnum - 1, col, lnum - 1, col})
+  local owning_lang_tree = root_lang_tree:language_for_range { lnum - 1, col, lnum - 1, col }
   local result
 
   for _, tree in ipairs(owning_lang_tree:trees()) do
-    local range = {lnum - 1, col, lnum - 1, col}
+    local range = { lnum - 1, col, lnum - 1, col }
 
     if utils.node_contains(tree:root(), range) then
       if include_anonymous then
@@ -65,13 +67,17 @@ local function get_node_at_cursor(options)
         result = tree:root():named_descendant_for_range(unpack(range))
       end
 
-      if result then return result end
+      if result then
+        return result
+      end
     end
   end
 end
 
 local function focus_buf(bufnr)
-  if not bufnr then return end
+  if not bufnr then
+    return
+  end
 
   local windows = vim.fn.win_findbuf(bufnr)
 
@@ -81,7 +87,9 @@ local function focus_buf(bufnr)
 end
 
 local function close_buf_windows(bufnr)
-  if not bufnr then return end
+  if not bufnr then
+    return
+  end
 
   utils.for_each_buf_window(bufnr, function(window)
     api.nvim_win_close(window, true)
@@ -89,7 +97,9 @@ local function close_buf_windows(bufnr)
 end
 
 local function close_buf(bufnr)
-  if not bufnr then return end
+  if not bufnr then
+    return
+  end
 
   close_buf_windows(bufnr)
 
@@ -113,7 +123,7 @@ local function is_buf_visible(bufnr)
 end
 
 local function get_update_time()
-  local config = configs.get_module 'playground'
+  local config = configs.get_module "playground"
 
   return config and config.updatetime or 25
 end
@@ -145,7 +155,7 @@ local function make_entry_toggle(property, options)
     if node_at_cursor then
       for lnum, node_entry in ipairs(node_entries) do
         if node_entry.node:id() == node_at_cursor:id() then
-          cursor_pos = {lnum, cursor_pos[2]}
+          cursor_pos = { lnum, cursor_pos[2] }
         end
       end
     end
@@ -163,26 +173,52 @@ local function setup_buf(for_buf)
 
   local buf = api.nvim_create_buf(false, false)
 
-  api.nvim_buf_set_option(buf, 'buftype', 'nofile')
-  api.nvim_buf_set_option(buf, 'swapfile', false)
-  api.nvim_buf_set_option(buf, 'buflisted', false)
-  api.nvim_buf_set_option(buf, 'filetype', 'tsplayground')
+  api.nvim_buf_set_option(buf, "buftype", "nofile")
+  api.nvim_buf_set_option(buf, "swapfile", false)
+  api.nvim_buf_set_option(buf, "buflisted", false)
+  api.nvim_buf_set_option(buf, "filetype", "tsplayground")
   api.nvim_buf_set_var(buf, query_buf_var_name, for_buf)
 
-  vim.cmd(string.format('augroup TreesitterPlayground_%d', buf))
-  vim.cmd 'au!'
-  vim.cmd(string.format([[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.highlight_node(%d)]], buf, for_buf))
-  vim.cmd(string.format([[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_highlights(%d)]], buf, for_buf))
-  vim.cmd(string.format([[autocmd BufWinEnter <buffer=%d> lua require'nvim-treesitter-playground.internal'.update(%d)]], buf, for_buf))
-  vim.cmd 'augroup END'
+  vim.cmd(string.format("augroup TreesitterPlayground_%d", buf))
+  vim.cmd "au!"
+  vim.cmd(
+    string.format(
+      [[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.highlight_node(%d)]],
+      buf,
+      for_buf
+    )
+  )
+  vim.cmd(
+    string.format(
+      [[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_highlights(%d)]],
+      buf,
+      for_buf
+    )
+  )
+  vim.cmd(
+    string.format(
+      [[autocmd BufWinEnter <buffer=%d> lua require'nvim-treesitter-playground.internal'.update(%d)]],
+      buf,
+      for_buf
+    )
+  )
+  vim.cmd "augroup END"
 
-  local config = configs.get_module("playground")
+  local config = configs.get_module "playground"
 
   for func, mapping in pairs(config.keybindings) do
-    api.nvim_buf_set_keymap(buf, 'n', mapping, string.format(':lua require "nvim-treesitter-playground.internal".%s(%d)<CR>', func, for_buf), { silent = true })
+    api.nvim_buf_set_keymap(
+      buf,
+      "n",
+      mapping,
+      string.format(':lua require "nvim-treesitter-playground.internal".%s(%d)<CR>', func, for_buf),
+      { silent = true }
+    )
   end
   api.nvim_buf_attach(buf, false, {
-    on_detach = function() clear_entry(for_buf) end
+    on_detach = function()
+      clear_entry(for_buf)
+    end,
   })
 
   return buf
@@ -201,7 +237,9 @@ local function resolve_lang_tree(bufnr)
       end
     end)
 
-    if found then return found end
+    if found then
+      return found
+    end
   end
 end
 
@@ -212,20 +250,34 @@ local function setup_query_editor(bufnr)
 
   local buf = api.nvim_create_buf(false, false)
 
-  api.nvim_buf_set_option(buf, 'buftype', 'nofile')
-  api.nvim_buf_set_option(buf, 'swapfile', false)
-  api.nvim_buf_set_option(buf, 'buflisted', false)
-  api.nvim_buf_set_option(buf, 'filetype', 'query')
+  api.nvim_buf_set_option(buf, "buftype", "nofile")
+  api.nvim_buf_set_option(buf, "swapfile", false)
+  api.nvim_buf_set_option(buf, "buflisted", false)
+  api.nvim_buf_set_option(buf, "filetype", "query")
   api.nvim_buf_set_var(buf, query_buf_var_name, bufnr)
 
-  vim.cmd(string.format([[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.on_query_cursor_move(%d)]], buf, bufnr))
+  vim.cmd(
+    string.format(
+      [[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.on_query_cursor_move(%d)]],
+      buf,
+      bufnr
+    )
+  )
 
-  api.nvim_buf_set_keymap(buf, 'n', 'R', string.format(':lua require "nvim-treesitter-playground.internal".update_query(%d, %d)<CR>', bufnr, buf), { silent = true })
+  api.nvim_buf_set_keymap(
+    buf,
+    "n",
+    "R",
+    string.format(':lua require "nvim-treesitter-playground.internal".update_query(%d, %d)<CR>', bufnr, buf),
+    { silent = true }
+  )
   api.nvim_buf_attach(buf, false, {
-    on_lines = utils.debounce(function() M.update_query(bufnr, buf) end, 1000)
+    on_lines = utils.debounce(function()
+      M.update_query(bufnr, buf)
+    end, 1000),
   })
 
-  local config = configs.get_module 'playground'
+  local config = configs.get_module "playground"
 
   if config.persist_queries then
     M.read_saved_query(bufnr):then_(vim.schedule_wrap(function(lines)
@@ -239,11 +291,11 @@ local function setup_query_editor(bufnr)
 end
 
 local function get_cache_path()
-  return vim.fn.stdpath('cache') .. '/nvim_treesitter_playground'
+  return vim.fn.stdpath "cache" .. "/nvim_treesitter_playground"
 end
 
 local function get_filename(bufnr)
-  return vim.fn.fnamemodify(vim.fn.bufname(bufnr), ':t')
+  return vim.fn.fnamemodify(vim.fn.bufname(bufnr), ":t")
 end
 
 function M.save_query_file(bufnr, query)
@@ -251,33 +303,53 @@ function M.save_query_file(bufnr, query)
   local filename = get_filename(bufnr)
 
   fs_stat(cache_path)
-    :catch(function() return fs_mkdir(cache_path, 493) end)
-    :then_(function() return fs_open(cache_path .. '/' .. filename .. '~', 'w', 493) end)
-    :then_(function(fd)
-      return fs_write(fd, query, -1):then_(function() return fd end)
+    :catch(function()
+      return fs_mkdir(cache_path, 493)
     end)
-    :then_(function(fd) return fs_close(fd) end)
-    :catch(function(err) print(err) end)
+    :then_(function()
+      return fs_open(cache_path .. "/" .. filename .. "~", "w", 493)
+    end)
+    :then_(function(fd)
+      return fs_write(fd, query, -1):then_(function()
+        return fd
+      end)
+    end)
+    :then_(function(fd)
+      return fs_close(fd)
+    end)
+    :catch(function(err)
+      print(err)
+    end)
 end
 
 function M.read_saved_query(bufnr)
   local cache_path = get_cache_path()
   local filename = get_filename(bufnr)
-  local query_path = cache_path .. '/' .. filename .. '~'
+  local query_path = cache_path .. "/" .. filename .. "~"
 
-  return fs_open(query_path, 'r', 438)
-    :then_(function(fd) return fs_fstat(fd)
-      :then_(function(stat) return fs_read(fd, stat.size, 0) end)
-      :then_(function(data) return fs_close(fd)
-        :then_(function() return vim.split(data, '\n') end) end)
+  return fs_open(query_path, "r", 438)
+    :then_(function(fd)
+      return fs_fstat(fd)
+        :then_(function(stat)
+          return fs_read(fd, stat.size, 0)
+        end)
+        :then_(function(data)
+          return fs_close(fd):then_(function()
+            return vim.split(data, "\n")
+          end)
+        end)
     end)
-    :catch(function() return {} end)
+    :catch(function()
+      return {}
+    end)
 end
 
 function M.focus_language(bufnr)
   local node_entry = M.get_current_entry(bufnr)
 
-  if not node_entry then return end
+  if not node_entry then
+    return
+  end
 
   M.update(bufnr, node_entry.language_tree)
 end
@@ -293,9 +365,13 @@ function M.highlight_playground_nodes(bufnr, nodes)
   local display_buf = entry.display_bufnr
   local lines = {}
   local count = 0
-  local node_map = utils.to_lookup_table(nodes, function(node) return node:id() end)
+  local node_map = utils.to_lookup_table(nodes, function(node)
+    return node:id()
+  end)
 
-  if not results or not display_buf then return end
+  if not results or not display_buf then
+    return
+  end
 
   for line, result in ipairs(results) do
     if node_map[result.node:id()] then
@@ -312,7 +388,7 @@ function M.highlight_playground_nodes(bufnr, nodes)
     local buf_lines = api.nvim_buf_get_lines(display_buf, lnum - 1, lnum, false)
 
     if buf_lines[1] then
-      vim.api.nvim_buf_add_highlight(display_buf, playground_ns, 'TSPlaygroundFocus', lnum - 1, 0, -1)
+      vim.api.nvim_buf_add_highlight(display_buf, playground_ns, "TSPlaygroundFocus", lnum - 1, 0, -1)
     end
   end
 
@@ -325,11 +401,15 @@ function M.highlight_playground_node_from_buffer(bufnr)
   local entry = M._entries[bufnr]
   local display_buf = entry.display_bufnr
 
-  if not display_buf then return end
+  if not display_buf then
+    return
+  end
 
-  local node_at_point = get_node_at_cursor({ include_anonymous = entry.include_anonymous_nodes })
+  local node_at_point = get_node_at_cursor { include_anonymous = entry.include_anonymous_nodes }
 
-  if not node_at_point then return end
+  if not node_at_point then
+    return
+  end
 
   local lnums = M.highlight_playground_nodes(bufnr, { node_at_point })
 
@@ -360,7 +440,9 @@ function M.highlight_node(bufnr)
 
   local node = M.get_current_node(bufnr)
 
-  if not node then return end
+  if not node then
+    return
+  end
 
   local start_row, start_col, _ = node:start()
 
@@ -373,7 +455,7 @@ end
 
 function M.highlight_nodes(bufnr, nodes)
   for _, node in ipairs(nodes) do
-    ts_utils.highlight_node(node, bufnr, playground_ns, 'TSPlaygroundFocus')
+    ts_utils.highlight_node(node, bufnr, playground_ns, "TSPlaygroundFocus")
   end
 end
 
@@ -395,12 +477,12 @@ function M.goto_node(bufnr)
 end
 
 function M.update_query(bufnr, query_bufnr)
-  local query = table.concat(api.nvim_buf_get_lines(query_bufnr, 0, -1, false), '\n')
+  local query = table.concat(api.nvim_buf_get_lines(query_bufnr, 0, -1, false), "\n")
   local matches = pl_query.parse(bufnr, query, M._entries[bufnr].focused_language_tree)
   local capture_by_color = {}
   local index = 1
 
-  local config = configs.get_module 'playground'
+  local config = configs.get_module "playground"
 
   if config.persist_queries then
     M.save_query_file(bufnr, query)
@@ -411,13 +493,13 @@ function M.update_query(bufnr, query_bufnr)
   M.clear_highlights(query_bufnr, query_hl_ns)
   M.clear_highlights(bufnr, query_hl_ns)
 
-  for capture_match in ts_query.iter_group_results(query_bufnr, 'captures') do
+  for capture_match in ts_query.iter_group_results(query_bufnr, "captures") do
     table.insert(M._entries[bufnr].captures, capture_match.capture)
 
     local capture = ts_utils.get_node_text(capture_match.capture.name.node)[1]
 
     if not capture_by_color[capture] then
-      capture_by_color[capture] = 'TSPlaygroundCapture' .. index
+      capture_by_color[capture] = "TSPlaygroundCapture" .. index
       index = index + 1
     end
 
@@ -443,7 +525,9 @@ function M.highlight_matched_query_nodes_from_capture(bufnr, capture)
   local query_results = M._entries[bufnr].query_results
   local display_buf = M._entries[bufnr].display_bufnr
 
-  if not query_results then return end
+  if not query_results then
+    return
+  end
 
   local nodes_to_highlight = {}
 
@@ -461,13 +545,15 @@ function M.highlight_matched_query_nodes_from_capture(bufnr, capture)
 end
 
 function M.on_query_cursor_move(bufnr)
-  local node_at_point = get_node_at_cursor({ include_anonymous = false })
+  local node_at_point = get_node_at_cursor { include_anonymous = false }
   local captures = M._entries[bufnr].captures
 
   M.clear_highlights(bufnr)
   M.clear_highlights(M._entries[bufnr].display_bufnr)
 
-  if not node_at_point or not captures then return end
+  if not node_at_point or not captures then
+    return
+  end
 
   for _, capture in ipairs(captures) do
     local _, _, capture_start = capture.def.node:start()
@@ -484,7 +570,9 @@ function M.on_query_cursor_move(bufnr)
 end
 
 function M.clear_highlights(bufnr, namespace)
-  if not bufnr then return end
+  if not bufnr then
+    return
+  end
 
   namespace = namespace or playground_ns
 
@@ -516,8 +604,8 @@ function M.toggle_query_editor(bufnr)
     vim.cmd "split"
     vim.cmd(string.format("buffer %d", query_buf))
 
-    api.nvim_win_set_option(0, 'spell', false)
-    api.nvim_win_set_option(0, 'number', true)
+    api.nvim_win_set_option(0, "spell", false)
+    api.nvim_win_set_option(0, "number", true)
 
     api.nvim_set_current_win(current_win)
   end
@@ -533,10 +621,10 @@ function M.open(bufnr)
   vim.cmd "vsplit"
   vim.cmd(string.format("buffer %d", display_buf))
 
-  api.nvim_win_set_option(0, 'spell', false)
-  api.nvim_win_set_option(0, 'number', false)
-  api.nvim_win_set_option(0, 'relativenumber', false)
-  api.nvim_win_set_option(0, 'cursorline', false)
+  api.nvim_win_set_option(0, "spell", false)
+  api.nvim_win_set_option(0, "number", false)
+  api.nvim_win_set_option(0, "relativenumber", false)
+  api.nvim_win_set_option(0, "cursorline", false)
 
   api.nvim_set_current_win(current_window)
 
@@ -565,7 +653,7 @@ end
 M.toggle_anonymous_nodes = make_entry_toggle("include_anonymous_nodes", { reprocess = true })
 M.toggle_injected_languages = make_entry_toggle("suppress_injected_languages", { reprocess = true })
 M.toggle_hl_groups = make_entry_toggle("include_hl_groups", { reprocess = true })
-M.toggle_language_display = make_entry_toggle("include_language")
+M.toggle_language_display = make_entry_toggle "include_language"
 
 function M.update(bufnr, lang_tree)
   bufnr = bufnr or api.nvim_get_current_buf()
@@ -575,14 +663,16 @@ function M.update(bufnr, lang_tree)
   local display_buf = entry.display_bufnr
 
   -- Don't bother updating if the playground isn't shown
-  if not display_buf or not is_buf_visible(display_buf) then return end
+  if not display_buf or not is_buf_visible(display_buf) then
+    return
+  end
 
   entry.focused_language_tree = lang_tree
 
   local results = printer.process(bufnr, lang_tree, {
     include_anonymous_nodes = entry.include_anonymous_nodes,
     suppress_injected_languages = entry.suppress_injected_languages,
-    include_hl_groups = entry.include_hl_groups
+    include_hl_groups = entry.include_hl_groups,
   })
 
   M._entries[bufnr].results = results
@@ -596,7 +686,9 @@ function M.render(bufnr)
   local display_buf = entry.display_bufnr
 
   -- Don't bother updating if the playground isn't shown
-  if not display_buf or not is_buf_visible(display_buf) then return end
+  if not display_buf or not is_buf_visible(display_buf) then
+    return
+  end
 
   api.nvim_buf_set_lines(display_buf, 0, -1, false, printer.print_entries(entry.results))
 
@@ -619,11 +711,13 @@ end
 
 function M.show_help()
   local function filter(item, path)
-    if path[#path] == vim.inspect.METATABLE then return end
+    if path[#path] == vim.inspect.METATABLE then
+      return
+    end
     return item
   end
-  print("Current keybindings:")
-  print(vim.inspect(configs.get_module('playground').keybindings, {process=filter}))
+  print "Current keybindings:"
+  print(vim.inspect(configs.get_module("playground").keybindings, { process = filter }))
 end
 
 function M.get_entries()
@@ -634,20 +728,32 @@ function M.attach(bufnr)
   api.nvim_buf_attach(bufnr, true, {
     on_lines = vim.schedule_wrap(utils.debounce(function()
       M.update(bufnr)
-    end, get_update_time))
+    end, get_update_time)),
   })
 
-  vim.cmd(string.format('augroup TreesitterPlayground_%d', bufnr))
-  vim.cmd 'au!'
-  vim.cmd(string.format([[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'._highlight_playground_node_debounced(%d)]], bufnr, bufnr))
-  vim.cmd(string.format([[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_playground_highlights(%d)]], bufnr, bufnr))
-  vim.cmd 'augroup END'
+  vim.cmd(string.format("augroup TreesitterPlayground_%d", bufnr))
+  vim.cmd "au!"
+  vim.cmd(
+    string.format(
+      [[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'._highlight_playground_node_debounced(%d)]],
+      bufnr,
+      bufnr
+    )
+  )
+  vim.cmd(
+    string.format(
+      [[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_playground_highlights(%d)]],
+      bufnr,
+      bufnr
+    )
+  )
+  vim.cmd "augroup END"
 end
 
 function M.detach(bufnr)
   clear_entry(bufnr)
-  vim.cmd(string.format('autocmd! TreesitterPlayground_%d CursorMoved', bufnr))
-  vim.cmd(string.format('autocmd! TreesitterPlayground_%d BufLeave', bufnr))
+  vim.cmd(string.format("autocmd! TreesitterPlayground_%d CursorMoved", bufnr))
+  vim.cmd(string.format("autocmd! TreesitterPlayground_%d BufLeave", bufnr))
 end
 
 return M
