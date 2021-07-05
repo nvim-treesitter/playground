@@ -1,3 +1,5 @@
+local api = vim.api
+
 local M = {}
 
 function M.debounce(fn, debounce_time)
@@ -25,6 +27,10 @@ function M.debounce(fn, debounce_time)
 end
 
 function M.for_each_buf_window(bufnr, fn)
+  if not api.nvim_buf_is_loaded(bufnr) then
+    return
+  end
+
   for _, window in ipairs(vim.fn.win_findbuf(bufnr)) do
     fn(window)
   end
