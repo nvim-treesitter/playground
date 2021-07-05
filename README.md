@@ -73,7 +73,7 @@ put the cursor under the capture to highlight the matches.
 ## Completions
 
 When you are on a `query` buffer, you can get a list of suggestions with
-<kbd>Ctrl-X Ctrl-O-</kbd>. See `:h 'omnifunc'`.
+<kbd>Ctrl-X Ctrl-O</kbd>. See `:h 'omnifunc'`.
 
 ## Query Linter
 
