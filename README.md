@@ -64,6 +64,17 @@ The tree can be toggled using the command `:TSPlaygroundToggle`.
 - `F`: Unfocuses the currently focused language.
 - `<cr>`: Go to current node in code buffer
 
+## Query Editor
+
+Press `o` to show the query editor.
+Write your query like `(node) @capture`,
+put the cursor under the capture to highlight the matches.
+
+## Completions
+
+When you are on a `query` buffer, you can get a list of suggestions with
+<kbd>Ctrl-X Ctrl-O-</kbd>. See `:h 'omnifunc'`.
+
 ## Query Linter
 
 The playground can lint query files for you. For that, you need to activate the `query_linter` module:
@@ -87,4 +98,3 @@ The playground comes with `:TSHighlightCapturesUnderCursor` that shows any trees
 ![image](https://user-images.githubusercontent.com/292349/119982982-6665ef00-bf74-11eb-93d5-9b214928c3a9.png)
 
 ![image](https://user-images.githubusercontent.com/292349/119983093-8c8b8f00-bf74-11eb-9fa2-3670a8253fbd.png)
-
