@@ -450,6 +450,13 @@ function M.highlight_node(bufnr)
   end
 
   local start_row, start_col, _ = node:start()
+  local last_row, last_col = utils.get_end_pos(bufnr)
+  -- Set the cursor to the last column
+  -- if the node starts at the EOF mark.
+  if start_row > last_row then
+    start_row = last_row
+    start_col = last_col
+  end
 
   M.highlight_nodes(bufnr, { node })
 
