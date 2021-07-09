@@ -60,4 +60,13 @@ function M.node_contains(node, range)
   return start_fits and end_fits
 end
 
+--- Returns a tuple with the position of the last line and last column (0-indexed).
+function M.get_end_pos(bufnr)
+  local bufnr = bufnr or api.nvim_get_current_buf()
+  local last_row = api.nvim_buf_line_count(bufnr) - 1
+  local last_line = api.nvim_buf_get_lines(bufnr, last_row, last_row + 1, true)[1]
+  local last_col = #last_line
+  return last_row, last_col
+end
+
 return M
