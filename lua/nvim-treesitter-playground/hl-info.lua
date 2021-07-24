@@ -38,7 +38,7 @@ function M.get_treesitter_hl()
 
     local iter = query:query():iter_captures(root, self.bufnr, row, row + 1)
 
-    for capture, node in iter do
+    for capture, node, metadata in iter do
       local hl = query.hl_cache[capture]
 
       if hl and ts_utils.is_in_node_range(node, row, col) then
@@ -48,6 +48,9 @@ function M.get_treesitter_hl()
           local line = "* **@" .. c .. "** -> " .. hl
           if general_hl ~= hl then
             line = line .. " -> **" .. general_hl .. "**"
+          end
+          if metadata.priority then
+            line = line .. " *(priority " .. metadata.priority .. ")*"
           end
           table.insert(matches, line)
         end
@@ -73,21 +76,29 @@ end
 function M.show_hl_captures()
   local buf = vim.api.nvim_get_current_buf()
   local lines = {}
-  local matches
+
+  local function show_matches(matches)
+    if #matches == 0 then
+      table.insert(lines, "* No highlight groups found")
+    end
+    for _, line in ipairs(matches) do
+      table.insert(lines, line)
+    end
+    table.insert(lines, "")
+  end
+
   if highlighter.active[buf] then
     table.insert(lines, "# Treesitter")
-    matches = M.get_treesitter_hl()
-  else
+    local matches = M.get_treesitter_hl()
+    show_matches(matches)
+  end
+
+  if vim.b.current_syntax then
     table.insert(lines, "# Syntax")
-    matches = M.get_syntax_hl()
+    local matches = M.get_syntax_hl()
+    show_matches(matches)
   end
-  if #matches == 0 then
-    table.insert(lines, "* No highlight groups found")
-  end
-  table.insert(lines, "")
-  for _, line in ipairs(matches) do
-    table.insert(lines, line)
-  end
+
   vim.lsp.util.open_floating_preview(lines, "markdown", { border = "single", pad_left = 4, pad_right = 4 })
 end
 
