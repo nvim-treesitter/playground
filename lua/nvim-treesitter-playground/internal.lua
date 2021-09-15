@@ -212,7 +212,7 @@ local function setup_buf(for_buf)
       "n",
       mapping,
       string.format(':lua require "nvim-treesitter-playground.internal".%s(%d)<CR>', func, for_buf),
-      { silent = true }
+      { silent = true, noremap = true }
     )
   end
   api.nvim_buf_attach(buf, false, {
