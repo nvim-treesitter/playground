@@ -1,7 +1,58 @@
 local highlighter = require "vim.treesitter.highlighter"
 local ts_utils = require "nvim-treesitter.ts_utils"
+local has_semantic_tokens, semantic_tokens = pcall(require, "vim.lsp.semantic_tokens")
 
 local M = {}
+
+function M.get_semantic_tokens()
+  local buf = vim.api.nvim_get_current_buf()
+  local ft = vim.api.nvim_buf_get_option(buf, "filetype")
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  row = row - 1
+  local tokens = semantic_tokens.get(buf)
+  local matches = {}
+
+  for client_id, client_tokens in pairs(tokens) do
+    local line_tokens = client_tokens[row + 1] or {}
+    local num_client_matches = 0
+    table.insert(matches, "# LSP Semantic Tokens (Client " .. client_id .. ")")
+    for _, token in ipairs(line_tokens) do
+      if token.start_char <= col and col < token.start_char + token.length then
+        local mappings = {}
+        if semantic_tokens.token_map[token.type] then
+          table.insert(mappings, ft .. semantic_tokens.token_map[token.type])
+        end
+        for _, m in pairs(token.modifiers) do
+          local hl = semantic_tokens.modifiers_map[m]
+          -- modifiers can have a per-type mapping
+          -- e.g. readonly = { variable = "ReadOnlyVariable" }
+          if type(hl) == "table" then
+            hl = hl[token.type]
+          end
+          if hl then
+            table.insert(mappings, ft .. hl)
+          end
+        end
+        num_client_matches = num_client_matches + 1
+        table.insert(
+          matches,
+          "* "
+            .. token.type
+            .. ", modifiers: "
+            .. vim.inspect(token.modifiers)
+            .. " -> "
+            .. table.concat(mappings, ", ")
+            .. " "
+        )
+      end
+      if num_client_matches == 0 then
+        table.insert(matches, "* No tokens under cursor")
+      end
+    end
+    table.insert(matches, "")
+  end
+  return matches
+end
 
 function M.get_treesitter_hl()
   local buf = vim.api.nvim_get_current_buf()
@@ -85,6 +136,11 @@ function M.show_hl_captures()
       table.insert(lines, line)
     end
     table.insert(lines, "")
+  end
+
+  if has_semantic_tokens then
+    local matches = M.get_semantic_tokens()
+    vim.list_extend(lines, matches)
   end
 
   if highlighter.active[buf] then
