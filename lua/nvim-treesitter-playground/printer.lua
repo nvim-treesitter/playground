@@ -3,22 +3,17 @@ local utils = require "nvim-treesitter-playground.utils"
 local api = vim.api
 
 local M = {}
-local treesitter_namespace = api.nvim_get_namespaces()["treesitter/highlighter"]
 local virt_text_id = api.nvim_create_namespace "TSPlaygroundHlGroups"
 local lang_virt_text_id = api.nvim_create_namespace "TSPlaygroundLangGroups"
 
-local function get_extmarks(bufnr, start, end_)
-  return api.nvim_buf_get_extmarks(bufnr, treesitter_namespace, start, end_, { details = true })
-end
-
 local function get_hl_group_for_node(bufnr, node)
-  local start_row, start_col, end_row, end_col = node:range()
-  local extmarks = get_extmarks(bufnr, { start_row, start_col }, { end_row, end_col })
+  local start_row, start_col, _, _ = node:range()
+  local extmarks = utils.get_hl_groups_at_position(bufnr, start_row, start_col )
   local groups = {}
 
   if #extmarks > 0 then
-    for _, ext in ipairs(extmarks) do
-      table.insert(groups, ext[4].hl_group)
+    for _, ext in pairs(extmarks) do
+      table.insert(groups, ext)
     end
   end
 
@@ -29,6 +24,7 @@ local function flatten_node(root, results, level, language_tree, options)
   level = level or 0
   results = results or {}
 
+
   for node, field in root:iter_children() do
     if node:named() or options.include_anonymous_nodes then
       local node_entry = {
@@ -36,7 +32,7 @@ local function flatten_node(root, results, level, language_tree, options)
         node = node,
         field = field,
         language_tree = language_tree,
-        hl_groups = options.include_hl_groups and options.bufnr and get_hl_group_for_node(options.bufnr, node) or {},
+        hl_groups = options.include_hl_groups and options.bufnr and get_hl_group_for_node(options.bufnr, node) or {}
       }
 
       table.insert(results, node_entry)
