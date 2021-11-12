@@ -1,4 +1,4 @@
-local utils = require 'nvim-treesitter-playground.utils'
+local utils = require "nvim-treesitter-playground.utils"
 local highlighter = require "vim.treesitter.highlighter"
 
 local M = {}

@@ -8,7 +8,7 @@ local lang_virt_text_id = api.nvim_create_namespace "TSPlaygroundLangGroups"
 
 local function get_hl_group_for_node(bufnr, node)
   local start_row, start_col, _, _ = node:range()
-  local extmarks = utils.get_hl_groups_at_position(bufnr, start_row, start_col )
+  local extmarks = utils.get_hl_groups_at_position(bufnr, start_row, start_col)
   local groups = {}
 
   if #extmarks > 0 then
@@ -24,7 +24,6 @@ local function flatten_node(root, results, level, language_tree, options)
   level = level or 0
   results = results or {}
 
-
   for node, field in root:iter_children() do
     if node:named() or options.include_anonymous_nodes then
       local node_entry = {
@@ -32,7 +31,7 @@ local function flatten_node(root, results, level, language_tree, options)
         node = node,
         field = field,
         language_tree = language_tree,
-        hl_groups = options.include_hl_groups and options.bufnr and get_hl_group_for_node(options.bufnr, node) or {}
+        hl_groups = options.include_hl_groups and options.bufnr and get_hl_group_for_node(options.bufnr, node) or {},
       }
 
       table.insert(results, node_entry)
