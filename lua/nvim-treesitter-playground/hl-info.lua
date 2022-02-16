@@ -39,14 +39,16 @@ function M.get_treesitter_hl()
     local iter = query:query():iter_captures(root, self.bufnr, row, row + 1)
 
     for capture, node, metadata in iter do
-      local hl = query.hl_cache[capture]
-
-      if hl and ts_utils.is_in_node_range(node, row, col) then
+      if ts_utils.is_in_node_range(node, row, col) then
         local c = query._query.captures[capture] -- name of the capture in the query
         if c ~= nil then
-          local general_hl = query:_get_hl_from_capture(capture)
-          local line = "* **@" .. c .. "** -> " .. hl
-          if general_hl ~= hl then
+          local general_hl, is_vim_hl = query:_get_hl_from_capture(capture)
+          local local_hl = not is_vim_hl and (tree:lang() .. general_hl)
+          local line = "* **@" .. c .. "**"
+          if local_hl then
+            line = line .. " -> **" .. local_hl .. "**"
+          end
+          if general_hl then
             line = line .. " -> **" .. general_hl .. "**"
           end
           if metadata.priority then
