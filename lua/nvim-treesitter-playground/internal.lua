@@ -508,7 +508,7 @@ function M.update_query(bufnr, query_bufnr)
   for capture_match in ts_query.iter_group_results(query_bufnr, "captures") do
     table.insert(M._entries[bufnr].captures, capture_match.capture)
 
-    local capture = ts_utils.get_node_text(capture_match.capture.name.node)[1]
+    local capture = ts_utils.get_node_text(capture_match.capture.name.node, query_bufnr)[1]
 
     if not capture_by_color[capture] then
       capture_by_color[capture] = "TSPlaygroundCapture" .. index
