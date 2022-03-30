@@ -1,4 +1,6 @@
 local api = vim.api
+local ts_utils = require "nvim-treesitter.ts_utils"
+local highlighter = require "vim.treesitter.highlighter"
 
 local M = {}
 
@@ -24,6 +26,56 @@ function M.debounce(fn, debounce_time)
       end)
     )
   end
+end
+
+function M.get_hl_groups_at_position(bufnr, row, col)
+  local buf_highlighter = highlighter.active[bufnr]
+
+  if not buf_highlighter then
+    return {}
+  end
+
+  local matches = {}
+
+  buf_highlighter.tree:for_each_tree(function(tstree, tree)
+    if not tstree then
+      return
+    end
+
+    local root = tstree:root()
+    local root_start_row, _, root_end_row, _ = root:range()
+
+    -- Only worry about trees within the line range
+    if root_start_row > row or root_end_row < row then
+      return
+    end
+
+    local query = buf_highlighter:get_query(tree:lang())
+
+    -- Some injected languages may not have highlight queries.
+    if not query:query() then
+      return
+    end
+
+    local iter = query:query():iter_captures(root, buf_highlighter.bufnr, row, row + 1)
+
+    for capture, node, metadata in iter do
+      local hl = query.hl_cache[capture]
+
+      if hl and ts_utils.is_in_node_range(node, row, col) then
+        local c = query._query.captures[capture] -- name of the capture in the query
+        if c ~= nil then
+          local general_hl, is_vim_hl = query:_get_hl_from_capture(capture)
+          local local_hl = not is_vim_hl and (tree:lang() .. general_hl)
+          table.insert(
+            matches,
+            { capture = c, specific = local_hl, general = general_hl, priority = metadata.priority }
+          )
+        end
+      end
+    end
+  end, true)
+  return matches
 end
 
 function M.for_each_buf_window(bufnr, fn)

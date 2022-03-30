@@ -1,65 +1,29 @@
+local utils = require "nvim-treesitter-playground.utils"
 local highlighter = require "vim.treesitter.highlighter"
-local ts_utils = require "nvim-treesitter.ts_utils"
 
 local M = {}
 
 function M.get_treesitter_hl()
-  local buf = vim.api.nvim_get_current_buf()
+  local bufnr = vim.api.nvim_get_current_buf()
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   row = row - 1
 
-  local self = highlighter.active[buf]
-
-  if not self then
-    return {}
+  local results = utils.get_hl_groups_at_position(bufnr, row, col)
+  local highlights = {}
+  for _, hl in pairs(results) do
+    local line = "* **@" .. hl.capture .. "**"
+    if hl.specific then
+      line = line .. " -> **" .. hl.specific .. "**"
+    end
+    if hl.general then
+      line = line .. " -> **" .. hl.general .. "**"
+    end
+    if hl.priority then
+      line = line .. "(" .. hl.priority .. ")"
+    end
+    table.insert(highlights, line)
   end
-
-  local matches = {}
-
-  self.tree:for_each_tree(function(tstree, tree)
-    if not tstree then
-      return
-    end
-
-    local root = tstree:root()
-    local root_start_row, _, root_end_row, _ = root:range()
-
-    -- Only worry about trees within the line range
-    if root_start_row > row or root_end_row < row then
-      return
-    end
-
-    local query = self:get_query(tree:lang())
-
-    -- Some injected languages may not have highlight queries.
-    if not query:query() then
-      return
-    end
-
-    local iter = query:query():iter_captures(root, self.bufnr, row, row + 1)
-
-    for capture, node, metadata in iter do
-      if ts_utils.is_in_node_range(node, row, col) then
-        local c = query._query.captures[capture] -- name of the capture in the query
-        if c ~= nil then
-          local general_hl, is_vim_hl = query:_get_hl_from_capture(capture)
-          local local_hl = not is_vim_hl and (tree:lang() .. general_hl)
-          local line = "* **@" .. c .. "**"
-          if local_hl then
-            line = line .. " -> **" .. local_hl .. "**"
-          end
-          if general_hl then
-            line = line .. " -> **" .. general_hl .. "**"
-          end
-          if metadata.priority then
-            line = line .. " *(priority " .. metadata.priority .. ")*"
-          end
-          table.insert(matches, line)
-        end
-      end
-    end
-  end, true)
-  return matches
+  return highlights
 end
 
 function M.get_syntax_hl()

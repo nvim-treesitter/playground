@@ -3,22 +3,17 @@ local utils = require "nvim-treesitter-playground.utils"
 local api = vim.api
 
 local M = {}
-local treesitter_namespace = api.nvim_get_namespaces()["treesitter/highlighter"]
 local virt_text_id = api.nvim_create_namespace "TSPlaygroundHlGroups"
 local lang_virt_text_id = api.nvim_create_namespace "TSPlaygroundLangGroups"
 
-local function get_extmarks(bufnr, start, end_)
-  return api.nvim_buf_get_extmarks(bufnr, treesitter_namespace, start, end_, { details = true })
-end
-
 local function get_hl_group_for_node(bufnr, node)
-  local start_row, start_col, end_row, end_col = node:range()
-  local extmarks = get_extmarks(bufnr, { start_row, start_col }, { end_row, end_col })
+  local start_row, start_col, _, _ = node:range()
+  local hlgroups = utils.get_hl_groups_at_position(bufnr, start_row, start_col)
   local groups = {}
 
-  if #extmarks > 0 then
-    for _, ext in ipairs(extmarks) do
-      table.insert(groups, ext[4].hl_group)
+  if #hlgroups > 0 then
+    for _, hl in pairs(hlgroups) do
+      table.insert(groups, hl.general)
     end
   end
 
