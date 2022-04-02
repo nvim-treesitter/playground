@@ -74,7 +74,31 @@ end
 -- @param border_opts table
 -- @return bufnr
 function M.show_ts_node(border_opts)
-  -- TODO: ok
+  if not parsers.has_parser() then
+    return
+  end
+
+  -- Get Full Path to node
+  -- @param node
+  -- @return string
+  local function get_full_path(node)
+    local path = {}
+    local parent = node
+    local result = node
+
+    while parent ~= nil do
+      result = parent
+      parent = result:parent()
+      path[#path + 1] = result:type()
+    end
+
+    local reverse_path = {}
+    for index, value in ipairs(path) do
+      reverse_path[#path + 1 - index] = value
+    end
+    return table.concat(reverse_path, " -> ")
+  end
+
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line = cursor[1] - 1
   local col = cursor[2]
@@ -89,10 +113,12 @@ function M.show_ts_node(border_opts)
     if root and ts_utils.is_in_node_range(root, line, col) then
       local node = root:named_descendant_for_range(line, col, line, col)
       local srow, scol, erow, ecol = ts_utils.get_vim_range({ node:range() }, 0)
+      local path = get_full_path(node)
+
       lines = {
         "# Treesitter",
         "* Parser: " .. lang_tree:lang(),
-        "* Node: " .. node:type(),
+        "* Node Path: " .. path,
         "* Range: ",
         "  - Start row: " .. srow,
         "  - End row: " .. erow,
