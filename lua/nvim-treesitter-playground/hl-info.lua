@@ -88,15 +88,15 @@ function M.show_ts_node(border_opts)
     local root = tree:root()
     if root and ts_utils.is_in_node_range(root, line, col) then
       local node = root:named_descendant_for_range(line, col, line, col)
-      local srow, scol, erow, ecol = node:range()
+      local srow, scol, erow, ecol = ts_utils.get_vim_range({ node:range() }, 0)
       lines = {
         "# Treesitter",
         "* Parser: " .. lang_tree:lang(),
         "* Node: " .. node:type(),
         "* Range: ",
-        "  - Start row: " .. srow + 1,
-        "  - End row: " .. erow + 1,
-        "  - Start Col: " .. scol + 1,
+        "  - Start row: " .. srow,
+        "  - End row: " .. erow,
+        "  - Start Col: " .. scol,
         "  - End col: " .. ecol,
       }
     else
