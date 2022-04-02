@@ -1,5 +1,7 @@
 local utils = require "nvim-treesitter-playground.utils"
 local highlighter = require "vim.treesitter.highlighter"
+local ts_utils = require "nvim-treesitter.ts_utils"
+local parsers = require "nvim-treesitter.parsers"
 
 local M = {}
 
@@ -66,6 +68,47 @@ function M.show_hl_captures()
   end
 
   vim.lsp.util.open_floating_preview(lines, "markdown", { border = "single", pad_left = 4, pad_right = 4 })
+end
+
+-- Show Node at Cursor
+-- @param border_opts table
+-- @return bufnr
+function M.show_ts_node(border_opts)
+  -- TODO: ok
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local line = cursor[1] - 1
+  local col = cursor[2]
+
+  local root_lang_tree = parsers.get_parser(0)
+  local lang_tree = root_lang_tree:language_for_range { line, col, line, col }
+
+  local lines
+
+  for _, tree in ipairs(lang_tree:trees()) do
+    local root = tree:root()
+    if root and ts_utils.is_in_node_range(root, line, col) then
+      local node = root:named_descendant_for_range(line, col, line, col)
+      local srow, scol, erow, ecol = node:range()
+      lines = {
+        "# Treesitter",
+        "* Parser: " .. lang_tree:lang(),
+        "* Node: " .. node:type(),
+        "* Range: ",
+        "  - Start row: " .. srow + 1,
+        "  - End row: " .. erow + 1,
+        "  - Start Col: " .. scol + 1,
+        "  - End col: " .. ecol,
+      }
+    else
+      lines = { "# Treesitter", "* Node not found" }
+    end
+  end
+
+  return vim.lsp.util.open_floating_preview(
+    lines,
+    "markdown",
+    border_opts or { border = "single", pad_left = 4, pad_right = 4 }
+  )
 end
 
 return M
