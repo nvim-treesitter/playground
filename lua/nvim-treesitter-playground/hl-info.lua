@@ -144,9 +144,11 @@ function M.show_ts_node(opts)
           "  - End col: " .. ecol,
         })
       end
-    else
-      lines[#lines + 1] = "* Node not found"
     end
+  end
+
+  if not node_under_cursor then
+    lines[#lines + 1] = "* Node not found"
   end
 
   local ns = vim.api.nvim_create_namespace "nvim-treesitter-current-node"
