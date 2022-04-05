@@ -74,15 +74,18 @@ end
 ---@param opts? table with optional fields
 ---             - full_path: (boolean, default false) show full path to current node
 ---             - show_range: (boolean, default true) show range of current node
+---             - include_anonymous: (boolean, default false) include anonymous node
 ---             - highlight_node: (boolean, default true) highlight the current node
 ---             - hl_group: (string, default "TSPlaygroundFocus") name of group
 --- @return number|nil bufnr number
 function M.show_ts_node(opts)
-  opts = vim.tbl_deep_extend(
-    "keep",
-    opts or {},
-    { full_path = false, show_range = true, highlight_node = true, hl_group = "TSPlaygroundFocus" }
-  )
+  opts = vim.tbl_deep_extend("keep", opts or {}, {
+    full_path = false,
+    show_range = true,
+    include_anonymous = false,
+    highlight_node = true,
+    hl_group = "TSPlaygroundFocus",
+  })
 
   if not parsers.has_parser() then
     return
@@ -90,23 +93,20 @@ function M.show_ts_node(opts)
 
   -- Get Full Path to node
   -- @param node
+  -- @param array?
   -- @return string
-  local function get_full_path(node)
-    local path = {}
-    local parent = node
-    local result = node
-
-    while parent ~= nil do
-      result = parent
-      parent = result:parent()
-      path[#path + 1] = result:type()
+  local function get_full_path(node, array)
+    local parent = node:parent()
+    if parent == nil then
+      if array == nil then
+        return node:type()
+      end
+      local reverse = vim.tbl_map(function(index)
+        return array[#array + 1 - index]:type()
+      end, vim.tbl_keys(array))
+      return table.concat(reverse, " -> ")
     end
-
-    local reverse_path = {}
-    for index, value in ipairs(path) do
-      reverse_path[#path + 1 - index] = value
-    end
-    return table.concat(reverse_path, " -> ")
+    return get_full_path(parent, vim.list_extend(array or {}, { node }))
   end
 
   local cursor = vim.api.nvim_win_get_cursor(0)
@@ -132,6 +132,13 @@ function M.show_ts_node(opts)
         "* Parser: " .. lang_tree:lang(),
         string.format("* %s: ", opts.full_path and "Node path" or "Node") .. path,
       })
+
+      if opts.include_anonymous then
+        local anonymous_node = root:descendant_for_range(line, col, line, col)
+        vim.list_extend(lines, {
+          " - Anonymous: " .. anonymous_node:type(),
+        })
+      end
 
       if opts.show_range then
         local srow, scol, erow, ecol = ts_utils.get_vim_range({ node:range() }, bufnr)
