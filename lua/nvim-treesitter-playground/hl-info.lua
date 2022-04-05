@@ -71,9 +71,19 @@ function M.show_hl_captures()
 end
 
 -- Show Node at Cursor
--- @param border_opts table
--- @return bufnr
-function M.show_ts_node(border_opts)
+---@param opts table with optional fields
+---             - full_path: (boolean, default false) show full path to current node
+---             - show_range: (boolean, default true) show range of current node
+---             - highlight_node: (boolean, default true) highlight the current node
+---             - hl_group: (string, default "TSPlaygroundFocus") name of group
+-- @return bufnr|nil - floating window
+function M.show_ts_node(opts)
+  opts = vim.tbl_deep_extend(
+    "keep",
+    opts or {},
+    { full_path = false, show_range = true, highlight_node = true, hl_group = "TSPlaygroundFocus" }
+  )
+
   if not parsers.has_parser() then
     return
   end
@@ -103,38 +113,60 @@ function M.show_ts_node(border_opts)
   local line = cursor[1] - 1
   local col = cursor[2]
 
-  local root_lang_tree = parsers.get_parser(0)
+  local bufnr = 0
+  local root_lang_tree = parsers.get_parser(bufnr)
   local lang_tree = root_lang_tree:language_for_range { line, col, line, col }
 
-  local lines
+  local lines = { "# Treesitter" }
+  local node_under_cursor
 
   for _, tree in ipairs(lang_tree:trees()) do
     local root = tree:root()
     if root and ts_utils.is_in_node_range(root, line, col) then
       local node = root:named_descendant_for_range(line, col, line, col)
-      local srow, scol, erow, ecol = ts_utils.get_vim_range({ node:range() }, 0)
-      local path = get_full_path(node)
+      local path = opts.full_path and get_full_path(node) or node:type()
 
-      lines = {
-        "# Treesitter",
+      node_under_cursor = node
+
+      vim.list_extend(lines, {
         "* Parser: " .. lang_tree:lang(),
-        "* Node Path: " .. path,
-        "* Range: ",
-        "  - Start row: " .. srow,
-        "  - End row: " .. erow,
-        "  - Start Col: " .. scol,
-        "  - End col: " .. ecol,
-      }
+        string.format("* %s: ", opts.full_path and "Node path" or "Node") .. path,
+      })
+
+      if opts.show_range then
+        local srow, scol, erow, ecol = ts_utils.get_vim_range({ node:range() }, bufnr)
+
+        vim.list_extend(lines, {
+          "* Range: ",
+          "  - Start row: " .. srow,
+          "  - End row: " .. erow,
+          "  - Start col: " .. scol,
+          "  - End col: " .. ecol,
+        })
+      end
     else
-      lines = { "# Treesitter", "* Node not found" }
+      lines[#lines + 1] = "* Node not found"
     end
   end
 
-  return vim.lsp.util.open_floating_preview(
-    lines,
-    "markdown",
-    border_opts or { border = "single", pad_left = 4, pad_right = 4 }
-  )
+  local ns = vim.api.nvim_create_namespace "nvim-treesitter-current-node"
+
+  if opts.highlight_node and node_under_cursor then
+    ts_utils.highlight_node(node_under_cursor, bufnr, ns, opts.hl_group)
+    vim.cmd(string.format(
+      [[
+      augroup TreesitterNodeUnderCursor
+      au!
+      autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_highlights(%d, %d)
+      augroup END
+    ]],
+      bufnr,
+      bufnr,
+      ns
+    ))
+  end
+
+  return vim.lsp.util.open_floating_preview(lines, "markdown", { border = "single", pad_left = 4, pad_right = 4 })
 end
 
 return M
