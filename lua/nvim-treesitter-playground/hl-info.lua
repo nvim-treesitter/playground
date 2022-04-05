@@ -76,7 +76,7 @@ end
 ---             - show_range: (boolean, default true) show range of current node
 ---             - highlight_node: (boolean, default true) highlight the current node
 ---             - hl_group: (string, default "TSPlaygroundFocus") name of group
--- @return bufnr|nil - floating window
+--- @return number|nil bufnr number
 function M.show_ts_node(opts)
   opts = vim.tbl_deep_extend(
     "keep",
