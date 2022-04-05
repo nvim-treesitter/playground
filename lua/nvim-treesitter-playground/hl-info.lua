@@ -71,7 +71,7 @@ function M.show_hl_captures()
 end
 
 -- Show Node at Cursor
----@param opts table with optional fields
+---@param opts? table with optional fields
 ---             - full_path: (boolean, default false) show full path to current node
 ---             - show_range: (boolean, default true) show range of current node
 ---             - highlight_node: (boolean, default true) highlight the current node
