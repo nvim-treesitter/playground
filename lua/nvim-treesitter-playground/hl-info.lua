@@ -158,21 +158,18 @@ function M.show_ts_node(opts)
     lines[#lines + 1] = "* Node not found"
   end
 
-  local ns = vim.api.nvim_create_namespace "nvim-treesitter-current-node"
-
   if opts.highlight_node and node_under_cursor then
+    local ns = vim.api.nvim_create_namespace "nvim-treesitter-current-node"
+
     ts_utils.highlight_node(node_under_cursor, bufnr, ns, opts.hl_group)
-    vim.cmd(string.format(
-      [[
-      augroup TreesitterNodeUnderCursor
-      au!
-      autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_highlights(%d, %d)
-      augroup END
-    ]],
-      bufnr,
-      bufnr,
-      ns
-    ))
+    vim.api.nvim_create_autocmd("CursorMoved", {
+      group = vim.api.nvim_create_augroup("TSNodeUnderCursor", {}),
+      buffer = bufnr,
+      callback = function()
+        require("nvim-treesitter-playground.internal").clear_highlights(bufnr, ns)
+      end,
+      desc = "TSPlayground: clear highlights",
+    })
   end
 
   return vim.lsp.util.open_floating_preview(lines, "markdown", { border = "single", pad_left = 4, pad_right = 4 })

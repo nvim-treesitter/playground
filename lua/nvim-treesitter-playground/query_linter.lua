@@ -139,27 +139,20 @@ function M.attach(buf, _)
   M.use_virtual_text = config.use_virtual_text
   M.lint_events = config.lint_events
 
-  vim.cmd(string.format("augroup TreesitterPlaygroundLint_%d", buf))
-  vim.cmd "au!"
-  for _, e in pairs(M.lint_events) do
-    vim.cmd(
-      string.format(
-        [[autocmd! %s <buffer=%d> lua require'nvim-treesitter-playground.query_linter'.lint(%d)]],
-        e,
-        buf,
-        buf
-      )
-    )
-  end
-  vim.cmd "augroup END"
+  vim.api.nvim_create_autocmd(M.lint_events, {
+    group = vim.api.nvim_create_augroup("TSPlaygroundLint", {}),
+    buffer = buf,
+    callback = function()
+      require("nvim-treesitter-playground.query_linter").lint(buf)
+    end,
+    desc = "TSPlayground: lint query",
+  })
 end
 
 function M.detach(buf)
   M.lints[buf] = nil
   M.clear_virtual_text(buf)
-  for _, e in pairs(M.lint_events) do
-    vim.cmd(string.format("autocmd! TreesitterPlaygroundLint_%d %s", buf, e))
-  end
+  vim.api.nvim_clear_autocmds { group = "TSPlaygroundLint", buffer = buf, event = M.lint_events }
 end
 
 return M
