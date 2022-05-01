@@ -268,12 +268,11 @@ local function setup_query_editor(bufnr)
     desc = "TSPlayground: on query cursor move",
   })
 
-  api.nvim_buf_set_keymap(buf, "n", "R", {
+  vim.keymap.set("n", "R", function()
+    require("nvim-treesitter-playground.internal").update_query(bufnr, buf)
+  end, {
     silent = true,
-    noremap = true,
-    callback = function()
-      require("nvim-treesitter-playground.internal").update_query(bufnr, buf)
-    end,
+    buffer = buf,
     desc = "TSPlayground: update query",
   })
 
