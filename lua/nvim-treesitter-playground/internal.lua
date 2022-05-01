@@ -7,6 +7,7 @@ local ts_query = require "nvim-treesitter.query"
 local pl_query = require "nvim-treesitter-playground.query"
 local Promise = require "nvim-treesitter-playground.promise"
 local api = vim.api
+local keymap = vim.keymap
 local luv = vim.loop
 
 local M = {}
@@ -210,12 +211,11 @@ local function setup_buf(for_buf)
   local config = configs.get_module "playground"
 
   for func, mapping in pairs(config.keybindings) do
-    api.nvim_buf_set_keymap(
-      buf,
+    keymap.set(
       "n",
       mapping,
       string.format(':lua require "nvim-treesitter-playground.internal".%s(%d)<CR>', func, for_buf),
-      { silent = true, noremap = true }
+      { buffer = buf, silent = true, noremap = true }
     )
   end
   api.nvim_buf_attach(buf, false, {
@@ -268,7 +268,7 @@ local function setup_query_editor(bufnr)
     desc = "TSPlayground: on query cursor move",
   })
 
-  vim.keymap.set("n", "R", function()
+  keymap.set("n", "R", function()
     require("nvim-treesitter-playground.internal").update_query(bufnr, buf)
   end, {
     silent = true,
