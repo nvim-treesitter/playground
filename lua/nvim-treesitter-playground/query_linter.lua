@@ -9,6 +9,7 @@ local hl_namespace = api.nvim_create_namespace "nvim-playground-lints"
 local ERROR_HL = "TSQueryLinterError"
 local MAGIC_NODE_NAMES = { "_", "ERROR" }
 local playground_module = require "nvim-treesitter-playground.internal"
+local get_node_text = vim.treesitter.query.get_node_text
 
 local M = {}
 
@@ -20,7 +21,7 @@ local function lint_node(node, buf, error_type, complete_message)
   if error_type ~= "Invalid Query" then
     ts_utils.highlight_node(node, buf, hl_namespace, ERROR_HL)
   end
-  local node_text = table.concat(ts_utils.get_node_text(node, buf), " ")
+  local node_text = get_node_text(node, buf):gsub("\n", " ")
   local error_text = complete_message or error_type .. ": " .. node_text
   local error_range = { node:range() }
   if M.use_virtual_text then
@@ -83,7 +84,7 @@ function M.lint(query_buf)
 
     local toplevel_node = utils.get_at_path(m, "toplevel-query.node")
     if toplevel_node and query_lang then
-      local query_text = table.concat(ts_utils.get_node_text(toplevel_node), "\n")
+      local query_text = get_node_text(toplevel_node, query_buf)
       local err
       ok, err = pcall(vim.treesitter.parse_query, query_lang, query_text)
       if not ok then
@@ -96,7 +97,7 @@ function M.lint(query_buf)
       local anonymous_node = utils.get_at_path(m, "anonymous_node.node")
       local node = named_node or anonymous_node
       if node then
-        local node_type = ts_utils.get_node_text(node)[1]
+        local node_type = get_node_text(node, query_buf)
 
         if anonymous_node then
           node_type = node_type:gsub('"(.*)".*$', "%1"):gsub("\\(.)", "%1")
@@ -117,7 +118,7 @@ function M.lint(query_buf)
       local field_node = utils.get_at_path(m, "field.node")
 
       if field_node then
-        local field_name = ts_utils.get_node_text(field_node)[1]
+        local field_name = get_node_text(field_node, query_buf)
         local found = vim.tbl_contains(parser_info.fields, field_name)
         if not found then
           lint_node(field_node, query_buf, "Invalid Field")
