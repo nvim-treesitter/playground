@@ -32,42 +32,48 @@ function M.get_syntax_hl()
   local line = vim.fn.line "."
   local col = vim.fn.col "."
   local matches = {}
+
   for _, i1 in ipairs(vim.fn.synstack(line, col)) do
     local i2 = vim.fn.synIDtrans(i1)
     local n1 = vim.fn.synIDattr(i1, "name")
     local n2 = vim.fn.synIDattr(i2, "name")
     table.insert(matches, "* " .. n1 .. " -> **" .. n2 .. "**")
   end
+
   return matches
 end
 
 function M.show_hl_captures()
   local buf = vim.api.nvim_get_current_buf()
-  local lines = {}
+  local result = {}
 
-  local function show_matches(matches)
+  local function add_to_result(matches, source)
     if #matches == 0 then
-      table.insert(lines, "* No highlight groups found")
+      return
     end
-    for _, line in ipairs(matches) do
-      table.insert(lines, line)
+
+    table.insert(result, "# " .. source)
+
+    for _, match in ipairs(matches) do
+      table.insert(result, match)
     end
-    table.insert(lines, "")
   end
 
   if highlighter.active[buf] then
-    table.insert(lines, "# Treesitter")
     local matches = M.get_treesitter_hl()
-    show_matches(matches)
+    add_to_result(matches, "Treesitter")
   end
 
-  if vim.b.current_syntax then
-    table.insert(lines, "# Syntax")
+  if vim.b.current_syntax ~= nil or #result == 0 then
     local matches = M.get_syntax_hl()
-    show_matches(matches)
+    add_to_result(matches, "Syntax")
   end
 
-  vim.lsp.util.open_floating_preview(lines, "markdown", { border = "single", pad_left = 4, pad_right = 4 })
+  if #result == 0 then
+    table.insert(result, "* No highlight groups found")
+  end
+
+  vim.lsp.util.open_floating_preview(result, "markdown", { border = "single", pad_left = 4, pad_right = 4 })
 end
 
 -- Show Node at Cursor
