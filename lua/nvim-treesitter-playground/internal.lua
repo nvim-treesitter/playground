@@ -495,7 +495,11 @@ end
 
 function M.update_query(bufnr, query_bufnr)
   local query = table.concat(api.nvim_buf_get_lines(query_bufnr, 0, -1, false), "\n")
-  local matches = pl_query.parse(bufnr, query, M._entries[bufnr].focused_language_tree)
+  local ok, matches = pcall(pl_query.parse, bufnr, query, M._entries[bufnr].focused_language_tree)
+  if not ok then
+    vim.notify("playground: " .. vim.inspect(matches), vim.log.levels.ERROR)
+    return
+  end
   local capture_by_color = {}
   local index = 1
 
