@@ -65,12 +65,7 @@ function M.get_hl_groups_at_position(bufnr, row, col)
       if hl and ts_utils.is_in_node_range(node, row, col) then
         local c = query._query.captures[capture] -- name of the capture in the query
         if c ~= nil then
-          local general_hl, is_vim_hl = c, false
-          local local_hl = not is_vim_hl and (tree:lang() .. general_hl)
-          table.insert(
-            matches,
-            { capture = c, specific = local_hl, general = general_hl, priority = metadata.priority }
-          )
+          table.insert(matches, { capture = c, priority = metadata.priority })
         end
       end
     end

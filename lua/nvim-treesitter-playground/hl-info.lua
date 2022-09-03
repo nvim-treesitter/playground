@@ -14,12 +14,6 @@ function M.get_treesitter_hl()
   local highlights = {}
   for _, hl in pairs(results) do
     local line = "* **@" .. hl.capture .. "**"
-    if hl.specific then
-      line = line .. " -> **" .. hl.specific .. "**"
-    end
-    if hl.general then
-      line = line .. " -> **" .. hl.general .. "**"
-    end
     if hl.priority then
       line = line .. "(" .. hl.priority .. ")"
     end
