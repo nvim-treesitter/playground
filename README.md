@@ -5,7 +5,7 @@ View treesitter information directly in Neovim!
 ![nvim-treesitter-playground](demo.gif)
 
 ## Requirements
-  - Neovim [nightly](https://github.com/neovim/neovim#install-from-source)
+
   - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) plugin
 
 ## Setup
