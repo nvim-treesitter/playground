@@ -13,7 +13,7 @@ local function get_hl_group_for_node(bufnr, node)
 
   if #hlgroups > 0 then
     for _, hl in pairs(hlgroups) do
-      table.insert(groups, hl.capture)
+      table.insert(groups, '@' .. hl.capture)
     end
   end
 
