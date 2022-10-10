@@ -24,7 +24,7 @@ local function lint_node(node, buf, error_type, complete_message)
   local error_text = complete_message or error_type .. ": " .. node_text
   local error_range = { node:range() }
   if M.use_virtual_text then
-    api.nvim_buf_set_virtual_text(buf, hl_namespace, error_range[1], { { error_text, ERROR_HL } }, {})
+    api.nvim_buf_set_extmark(buf, hl_namespace, error_range[1], 0, { virt_text = { { error_text, ERROR_HL } } })
   end
   table.insert(M.lints[buf], { type = error_type, range = error_range, message = error_text, node_text = node_text })
 end
