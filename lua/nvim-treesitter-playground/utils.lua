@@ -62,17 +62,29 @@ function M.range_intersects(range_1, range_2)
     )
 end
 
-function M.get_hl_groups_at_position(bufnr, row, col)
-  local buf_highlighter = highlighter.active[bufnr]
-
-  if not buf_highlighter then
-    return {}
+--- Invokes the callback for each active highlighter's |LanguageTree|s recursively.
+---
+--- Note: This includes each root tree's child trees as well.
+---
+---@param bufnr number Buffer number (0 for current buffer)
+---@param fn function(buf_highlighter: TSHighlighter, tstree: tsnode, tree: LanguageTree)
+function M.for_each_hl_tree(bufnr, fn)
+  if bufnr == 0 then
+    bufnr = a.nvim_get_current_buf()
   end
+  local buf_highlighter = highlighter.active[bufnr]
+  if not buf_highlighter then
+    return
+  end
+  return buf_highlighter.tree:for_each_tree(function(tstree, tree)
+    return fn(buf_highlighter, tstree, tree)
+  end, true)
+end
 
+function M.get_hl_groups_at_position(bufnr, row, col)
   local range = { row, col, row, col }
   local matches = {}
-
-  buf_highlighter.tree:for_each_tree(function(tstree, tree)
+  M.for_each_hl_tree(bufnr, function(buf_highlighter, tstree, tree)
     if not tstree then
       return
     end
@@ -103,7 +115,7 @@ function M.get_hl_groups_at_position(bufnr, row, col)
         end
       end
     end
-  end, true)
+  end)
   return matches
 end
 
