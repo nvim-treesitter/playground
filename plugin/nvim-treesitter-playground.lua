@@ -15,14 +15,14 @@ end
 -- define commands
 api.nvim_create_user_command("TSPlaygroundToggle", function()
   require("nvim-treesitter-playground.internal").toggle()
-end, {})
+end, { bar = true })
 api.nvim_create_user_command("TSNodeUnderCursor", function()
   require("nvim-treesitter-playground.hl-info").show_ts_node()
-end, {})
+end, { bar = true })
 api.nvim_create_user_command("TSCaptureUnderCursor", function()
   require("nvim-treesitter-playground.hl-info").show_hl_captures()
-end, {})
+end, { bar = true })
 ---@deprecated
 api.nvim_create_user_command("TSHighlightCapturesUnderCursor", function()
   require("nvim-treesitter-playground.hl-info").show_hl_captures()
-end, {})
+end, { bar = true })
