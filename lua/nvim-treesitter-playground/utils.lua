@@ -81,6 +81,26 @@ function M.for_each_hl_tree(bufnr, fn)
   end, true)
 end
 
+--- Invokes the callback for each capture inside {node} that is contained in {range}.
+---
+---@param query (Query|nil) Parsed query (callback will not be invoked if nil)
+---@param node userdata |tsnode| under which the search will occur
+---@param source (number|string) Source buffer or string to extract text from
+---@param range range Boundaries for the search (inclusive)
+---@param fn function(capture_id: string, captured_node: tsnode, capture_metadata: table)
+function M.for_each_query_capture_for_range(query, node, source, range, fn)
+  -- Only worry about nodes within the range
+  if query == nil or not M.range_intersects({ node:range() }, range) then
+    return
+  end
+
+  for capture_id, captured_node, capture_metadata in query:iter_captures(node, source, range[1], range[3] + 1) do
+    if M.range_contains({ captured_node:range() }, range) then
+      fn(capture_id, captured_node, capture_metadata)
+    end
+  end
+end
+
 function M.get_hl_groups_at_position(bufnr, row, col)
   local range = { row, col, row, col }
   local matches = {}
@@ -89,32 +109,20 @@ function M.get_hl_groups_at_position(bufnr, row, col)
       return
     end
 
-    local root = tstree:root()
-
-    -- Only worry about trees within the range
-    if not M.range_intersects({ root:range() }, range) then
-      return
-    end
-
-    local query = buf_highlighter:get_query(tree:lang())
-
-    -- Some injected languages may not have highlight queries.
-    if not query:query() then
-      return
-    end
-
-    local iter = query:query():iter_captures(root, buf_highlighter.bufnr, range[1], range[3] + 1)
-
-    for capture, node, metadata in iter do
-      local hl = query.hl_cache[capture]
-
-      if hl and M.range_contains({ node:range() }, range) then
-        local c = query._query.captures[capture] -- name of the capture in the query
-        if c ~= nil then
-          table.insert(matches, { capture = c, priority = metadata.priority })
+    local hl_query = buf_highlighter:get_query(tree:lang())
+    M.for_each_query_capture_for_range(
+      hl_query:query(),
+      tstree:root(),
+      buf_highlighter.bufnr,
+      range,
+      function(capture_id, captured_node, capture_metadata)
+        local capture_hl = hl_query.hl_cache[capture_id]
+        if capture_hl then
+          local capture_name = hl_query:query().captures[capture_id]
+          table.insert(matches, { capture = capture_name, priority = capture_metadata.priority })
         end
       end
-    end
+    )
   end)
   return matches
 end
