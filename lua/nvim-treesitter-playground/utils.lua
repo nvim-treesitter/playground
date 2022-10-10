@@ -28,6 +28,17 @@ function M.debounce(fn, debounce_time)
   end
 end
 
+--- Determines if {range_1} contains (inclusive) {range_2}
+---
+---@param range table
+---@param range table
+---
+---@return boolean True if {range_1} contains {range_2}
+function M.range_contains(range_1, range_2)
+  return (range_1[1] < range_2[1] or (range_1[1] == range_2[1] and range_1[2] <= range_2[2]))
+    and (range_1[3] > range_2[3] or (range_1[3] == range_2[3] and range_1[4] >= range_2[4]))
+end
+
 function M.get_hl_groups_at_position(bufnr, row, col)
   local buf_highlighter = highlighter.active[bufnr]
 
@@ -35,6 +46,7 @@ function M.get_hl_groups_at_position(bufnr, row, col)
     return {}
   end
 
+  local range = { row, col, row, col }
   local matches = {}
 
   buf_highlighter.tree:for_each_tree(function(tstree, tree)
@@ -46,7 +58,7 @@ function M.get_hl_groups_at_position(bufnr, row, col)
     local root_start_row, _, root_end_row, _ = root:range()
 
     -- Only worry about trees within the line range
-    if root_start_row > row or root_end_row < row then
+    if root_start_row > range[3] or root_end_row < range[1] then
       return
     end
 
@@ -57,12 +69,12 @@ function M.get_hl_groups_at_position(bufnr, row, col)
       return
     end
 
-    local iter = query:query():iter_captures(root, buf_highlighter.bufnr, row, row + 1)
+    local iter = query:query():iter_captures(root, buf_highlighter.bufnr, range[1], range[3] + 1)
 
     for capture, node, metadata in iter do
       local hl = query.hl_cache[capture]
 
-      if hl and ts_utils.is_in_node_range(node, row, col) then
+      if hl and M.range_contains({ node:range() }, range) then
         local c = query._query.captures[capture] -- name of the capture in the query
         if c ~= nil then
           table.insert(matches, { capture = c, priority = metadata.priority })
@@ -100,11 +112,7 @@ function M.to_lookup_table(list, key_mapper)
 end
 
 function M.node_contains(node, range)
-  local start_row, start_col, end_row, end_col = node:range()
-  local start_fits = start_row < range[1] or (start_row == range[1] and start_col <= range[2])
-  local end_fits = end_row > range[3] or (end_row == range[3] and end_col >= range[4])
-
-  return start_fits and end_fits
+  return M.range_contains({ node:range() }, range)
 end
 
 --- Returns a tuple with the position of the last line and last column (0-indexed).

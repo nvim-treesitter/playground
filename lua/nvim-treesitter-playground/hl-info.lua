@@ -110,20 +110,19 @@ function M.show_ts_node(opts)
   end
 
   local cursor = vim.api.nvim_win_get_cursor(0)
-  local line = cursor[1] - 1
-  local col = cursor[2]
+  local range = { cursor[1] - 1, cursor[2], cursor[1] - 1, cursor[2] }
 
   local bufnr = 0
   local root_lang_tree = parsers.get_parser(bufnr)
-  local lang_tree = root_lang_tree:language_for_range { line, col, line, col }
+  local lang_tree = root_lang_tree:language_for_range(range)
 
   local lines = { "# Treesitter" }
   local node_under_cursor
 
   for _, tree in ipairs(lang_tree:trees()) do
     local root = tree:root()
-    if root and ts_utils.is_in_node_range(root, line, col) then
-      local node = root:named_descendant_for_range(line, col, line, col)
+    if root and utils.range_contains({ root:range() }, range) then
+      local node = root:named_descendant_for_range(range[1], range[2], range[3], range[4])
       local path = opts.full_path and get_full_path(node) or node:type()
 
       node_under_cursor = node
@@ -134,7 +133,7 @@ function M.show_ts_node(opts)
       })
 
       if opts.include_anonymous then
-        local anonymous_node = root:descendant_for_range(line, col, line, col)
+        local anonymous_node = root:descendant_for_range(range[1], range[2], range[3], range[4])
         vim.list_extend(lines, {
           " - Anonymous: " .. anonymous_node:type(),
         })
