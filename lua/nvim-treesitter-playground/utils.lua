@@ -39,6 +39,29 @@ function M.range_contains(range_1, range_2)
     and (range_1[3] > range_2[3] or (range_1[3] == range_2[3] and range_1[4] >= range_2[4]))
 end
 
+--- Determines if {range_1} intersects (inclusive) {range_2}
+---
+---@param range table
+---@param range table
+---
+---@return boolean True if {range_1} intersects {range_2}
+function M.range_intersects(range_1, range_2)
+  return (
+    range_1[1] < range_2[3]
+    or (
+      range_1[1] == range_2[3]
+      and (range_1[2] < range_2[4] or (range_1[2] == range_2[4] and range_1[4] == range_2[4]))
+    )
+  )
+    and (
+      range_2[1] < range_1[3]
+      or (
+        range_2[1] == range_1[3]
+        and (range_2[2] < range_1[4] or (range_2[2] == range_1[4] and range_2[4] == range_1[4]))
+      )
+    )
+end
+
 function M.get_hl_groups_at_position(bufnr, row, col)
   local buf_highlighter = highlighter.active[bufnr]
 
@@ -55,10 +78,9 @@ function M.get_hl_groups_at_position(bufnr, row, col)
     end
 
     local root = tstree:root()
-    local root_start_row, _, root_end_row, _ = root:range()
 
-    -- Only worry about trees within the line range
-    if root_start_row > range[3] or root_end_row < range[1] then
+    -- Only worry about trees within the range
+    if not M.range_intersects({ root:range() }, range) then
       return
     end
 
