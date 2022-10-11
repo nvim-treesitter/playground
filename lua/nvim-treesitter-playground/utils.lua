@@ -101,10 +101,14 @@ function M.for_each_query_capture_for_range(query, node, source, range, fn)
   end
 end
 
-function M.get_hl_groups_at_position(bufnr, row, col)
-  local range = { row, col, row, col }
-  local matches = {}
-  M.for_each_hl_tree(bufnr, function(buf_highlighter, tstree, tree)
+--- Invokes the callback for each highlighting group inside {bufnr} that is contained in {range}.
+---
+---@private
+---@param bufnr number Buffer number (0 for current buffer)
+---@param range range Boundaries for the search (inclusive)
+---@param fn function(capture_id: string, captured_node: tsnode, capture_metadata: table, capture_name: string)
+local function for_each_hl_group_for_range(bufnr, range, fn)
+  return M.for_each_hl_tree(bufnr, function(buf_highlighter, tstree, tree)
     if not tstree then
       return
     end
@@ -119,10 +123,18 @@ function M.get_hl_groups_at_position(bufnr, row, col)
         local capture_hl = hl_query.hl_cache[capture_id]
         if capture_hl then
           local capture_name = hl_query:query().captures[capture_id]
-          table.insert(matches, { capture = capture_name, priority = capture_metadata.priority })
+          fn(capture_id, captured_node, capture_metadata, capture_name)
         end
       end
     )
+  end)
+end
+
+function M.get_hl_groups_at_position(bufnr, row, col)
+  local range = { row, col, row, col }
+  local matches = {}
+  for_each_hl_group_for_range(bufnr, range, function(c_id, c_node, c_metadata, c_name)
+    table.insert(matches, { capture = c_name, priority = c_metadata.priority })
   end)
   return matches
 end
