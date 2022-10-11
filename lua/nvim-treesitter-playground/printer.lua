@@ -135,11 +135,10 @@ function M.print_hl_groups(bufnr, node_entries)
       local hl_group_name = "@" .. hl_group.capture_name
       local str = hl_group_name
 
-      if j ~= #hl_groups then
-        str = str .. " / "
-      end
-
       table.insert(groups, { str, hl_group_name })
+      if j ~= #hl_groups then
+        table.insert(groups, { " / " })
+      end
     end
     api.nvim_buf_set_extmark(bufnr, virt_text_id, i - 1, 0, { virt_text = groups })
   end
