@@ -130,6 +130,17 @@ local function for_each_hl_group_for_range(bufnr, range, fn)
   end)
 end
 
+function M.get_hl_groups_for_range(bufnr, range)
+  local matches = {}
+  for_each_hl_group_for_range(bufnr, range, function(c_id, c_node, c_metadata, c_name)
+    table.insert(
+      matches,
+      { capture_id = c_id, capture_name = c_name, capture_node = c_node, capture_metadata = c_metadata }
+    )
+  end)
+  return matches
+end
+
 function M.get_hl_groups_at_position(bufnr, row, col)
   local range = { row, col, row, col }
   local matches = {}

@@ -7,15 +7,15 @@ local M = {}
 
 function M.get_treesitter_hl()
   local bufnr = vim.api.nvim_get_current_buf()
-  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  row = row - 1
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local range = { cursor[1] - 1, cursor[2], cursor[1] - 1, cursor[2] }
 
-  local results = utils.get_hl_groups_at_position(bufnr, row, col)
+  local results = utils.get_hl_groups_for_range(bufnr, range)
   local highlights = {}
   for _, hl in pairs(results) do
-    local line = "* **@" .. hl.capture .. "**"
-    if hl.priority then
-      line = line .. "(" .. hl.priority .. ")"
+    local line = "* **@" .. hl.capture_name .. "**"
+    if hl.capture_metadata.priority then
+      line = line .. "(" .. hl.capture_metadata.priority .. ")"
     end
     table.insert(highlights, line)
   end

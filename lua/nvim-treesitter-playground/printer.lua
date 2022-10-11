@@ -6,20 +6,6 @@ local M = {}
 local virt_text_id = api.nvim_create_namespace "TSPlaygroundHlGroups"
 local lang_virt_text_id = api.nvim_create_namespace "TSPlaygroundLangGroups"
 
-local function get_hl_group_for_node(bufnr, node)
-  local start_row, start_col, _, _ = node:range()
-  local hlgroups = utils.get_hl_groups_at_position(bufnr, start_row, start_col)
-  local groups = {}
-
-  if #hlgroups > 0 then
-    for _, hl in pairs(hlgroups) do
-      table.insert(groups, "@" .. hl.capture)
-    end
-  end
-
-  return groups
-end
-
 local function flatten_node(root, results, level, language_tree, options)
   level = level or 0
   results = results or {}
@@ -31,7 +17,10 @@ local function flatten_node(root, results, level, language_tree, options)
         node = node,
         field = field,
         language_tree = language_tree,
-        hl_groups = options.include_hl_groups and options.bufnr and get_hl_group_for_node(options.bufnr, node) or {},
+        hl_groups = options.include_hl_groups and options.bufnr and utils.get_hl_groups_for_range(
+          options.bufnr,
+          { node:range() }
+        ) or {},
       }
 
       table.insert(results, node_entry)
@@ -142,13 +131,14 @@ function M.print_hl_groups(bufnr, node_entries)
     local groups = {}
 
     for j, hl_group in ipairs(node_entry.hl_groups) do
-      local str = hl_group .. " / "
+      local hl_group_name = "@" .. hl_group.capture_name
+      local str = hl_group_name .. " / "
 
       if j == #hl_group then
         str = string.sub(str, 0, -3)
       end
 
-      table.insert(groups, { str, hl_group })
+      table.insert(groups, { str, hl_group_name })
     end
 
     api.nvim_buf_set_extmark(bufnr, virt_text_id, i - 1, 0, { virt_text = groups })
