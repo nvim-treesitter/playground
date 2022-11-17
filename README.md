@@ -2,7 +2,7 @@
 
 View treesitter information directly in Neovim!
 
-![nvim-treesitter-playground](demo.gif)
+![demo](https://user-images.githubusercontent.com/2361214/202389106-244ac890-9442-4759-9b2c-4fe3c247dfbc.gif)
 
 ## Requirements
   - Neovim [nightly](https://github.com/neovim/neovim#install-from-source)
