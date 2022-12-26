@@ -581,7 +581,7 @@ function M.on_query_cursor_move(bufnr)
     local _, _, capture_end = capture.def.node:end_()
     local _, _, start = node_at_point:start()
     local _, _, _end = node_at_point:end_()
-    local capture_name = vim.treesitter.query.get_node_text(capture.name.node, bufnr)
+    local capture_name = vim.treesitter.query.get_node_text(capture.name.node, api.nvim_get_current_buf())
 
     if start >= capture_start and _end <= capture_end and capture_name then
       M.highlight_matched_query_nodes_from_capture(bufnr, capture_name)
