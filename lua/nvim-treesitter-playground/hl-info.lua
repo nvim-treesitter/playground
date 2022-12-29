@@ -2,8 +2,15 @@ local utils = require "nvim-treesitter-playground.utils"
 local highlighter = require "vim.treesitter.highlighter"
 local ts_utils = require "nvim-treesitter.ts_utils"
 local parsers = require "nvim-treesitter.parsers"
+local configs = require "nvim-treesitter.configs"
 
 local M = {}
+
+local function get_float_zindex()
+  local config = configs.get_module "playground"
+
+  return config and config.floating_window_zindex or 200
+end
 
 function M.get_treesitter_hl()
   local bufnr = vim.api.nvim_get_current_buf()
@@ -67,7 +74,7 @@ function M.show_hl_captures()
     table.insert(result, "* No highlight groups found")
   end
 
-  vim.lsp.util.open_floating_preview(result, "markdown", { border = "single", pad_left = 4, pad_right = 4 })
+  vim.lsp.util.open_floating_preview(result, "markdown", { border = "single", pad_left = 4, pad_right = 4, zindex = get_float_zindex() })
 end
 
 -- Show Node at Cursor
@@ -172,7 +179,7 @@ function M.show_ts_node(opts)
     })
   end
 
-  return vim.lsp.util.open_floating_preview(lines, "markdown", { border = "single", pad_left = 4, pad_right = 4 })
+  return vim.lsp.util.open_floating_preview(lines, "markdown", { border = "single", pad_left = 4, pad_right = 4, zindex = get_float_zindex() })
 end
 
 return M
