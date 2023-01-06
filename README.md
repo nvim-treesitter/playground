@@ -6,7 +6,7 @@ View treesitter information directly in Neovim!
 
 ## Requirements
   - Neovim [nightly](https://github.com/neovim/neovim#install-from-source)
-  - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) plugin
+  - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) plugin (with the `query` grammar installed)
 
 ## Setup
 
