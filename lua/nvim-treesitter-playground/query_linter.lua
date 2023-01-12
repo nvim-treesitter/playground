@@ -70,7 +70,9 @@ function M.lint(query_buf)
 
   local ok, parser_info = pcall(vim.treesitter.inspect_language, query_lang)
 
-  parser_info = ok and parser_info
+  if not ok then
+    return
+  end
 
   local matches = queries.get_matches(query_buf, "query-linter-queries")
 
