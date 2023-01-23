@@ -89,6 +89,8 @@ require "nvim-treesitter.configs".setup {
 }
 ```
 
+*Note: Query linter assumes certain directory structure to identify which language queries belong to. It expect query files to be under `./queries/<language_name>`*
+
 ![image](https://user-images.githubusercontent.com/7189118/101246661-06089a00-3715-11eb-9c57-6d6439defbf8.png)
 
 ## Show treesitter and syntax highlight groups under the cursor 
