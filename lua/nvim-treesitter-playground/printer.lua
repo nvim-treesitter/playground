@@ -151,7 +151,7 @@ function M.print_hl_groups(bufnr, node_entries)
       table.insert(groups, { str, hl_group })
     end
 
-    api.nvim_buf_set_virtual_text(bufnr, virt_text_id, i, groups, {})
+    api.nvim_buf_set_virtual_text(bufnr, virt_text_id, i - 1, groups, {})
   end
 end
 
