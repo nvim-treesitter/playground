@@ -122,7 +122,7 @@ function M.show_ts_node(opts)
 
   for _, tree in ipairs(lang_tree:trees()) do
     local root = tree:root()
-    if root and ts_utils.is_in_node_range(root, line, col) then
+    if root and vim.treesitter.is_in_node_range(root, line, col) then
       local node = root:named_descendant_for_range(line, col, line, col)
       local path = opts.full_path and get_full_path(node) or node:type()
 
