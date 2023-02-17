@@ -1,12 +1,10 @@
 local api = vim.api
 local queries = require "nvim-treesitter.query"
 local parsers = require "nvim-treesitter.parsers"
-local ts_utils = require "nvim-treesitter.ts_utils"
 local utils = require "nvim-treesitter.utils"
 local configs = require "nvim-treesitter.configs"
 
 local namespace = api.nvim_create_namespace "nvim-playground-lints"
-local ERROR_HL = "TSQueryLinterError"
 local MAGIC_NODE_NAMES = { "_", "ERROR" }
 local playground_module = require "nvim-treesitter-playground.internal"
 
@@ -14,7 +12,6 @@ local M = {}
 
 M.lints = {}
 M.use_diagnostics = true
-M.use_virtual_text = false
 M.lint_events = { "BufWrite", "CursorHold" }
 
 local function show_lints(buf, lints)
@@ -28,20 +25,6 @@ local function show_lints(buf, lints)
       }
     end, lints)
     vim.diagnostic.set(namespace, buf, diagnostics)
-  else
-    for _, lint in ipairs(lints) do
-      if lint.type ~= "Invalid Query" then
-        ts_utils.highlight_range(lint.range, buf, namespace, ERROR_HL)
-      end
-
-      if M.use_virtual_text then
-        api.nvim_buf_set_extmark(buf, namespace, lint.range[1], lint.range[2], {
-          end_row = lint.range[3],
-          end_col = lint.range[4],
-          virt_text = { lint.message, ERROR_HL }
-        })
-      end
-    end
   end
 end
 
@@ -157,7 +140,6 @@ end
 
 function M.clear_virtual_text(buf)
   vim.diagnostic.reset(namespace, buf)
-  api.nvim_buf_clear_namespace(buf, namespace, 0, -1)
 end
 
 function M.attach(buf, _)
@@ -165,7 +147,6 @@ function M.attach(buf, _)
 
   local config = configs.get_module "query_linter"
   M.use_diagnostics = config.use_diagnostics
-  M.use_virtual_text = config.use_virtual_text
   M.lint_events = config.lint_events
 
   vim.api.nvim_create_autocmd(M.lint_events, {
