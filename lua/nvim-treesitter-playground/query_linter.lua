@@ -17,16 +17,38 @@ M.use_diagnostics = true
 M.use_virtual_text = false
 M.lint_events = { "BufWrite", "CursorHold" }
 
-local function lint_node(node, buf, error_type, complete_message)
-  if not M.use_diagnostics and error_type ~= "Invalid Query" then
-    ts_utils.highlight_node(node, buf, namespace, ERROR_HL)
+local function show_lints(buf, lints)
+  if M.use_diagnostics then
+    local diagnostics = vim.tbl_map(function(lint)
+      return {
+        lnum = lint.range[1], end_lnum = lint.range[3],
+        col = lint.range[2], end_col = lint.range[4],
+        severity = vim.diagnostic.ERROR,
+        message = lint.message
+      }
+    end, lints)
+    vim.diagnostic.set(namespace, buf, diagnostics)
+  else
+    for _, lint in ipairs(lints) do
+      if lint.type ~= "Invalid Query" then
+        ts_utils.highlight_range(lint.range, buf, namespace, ERROR_HL)
+      end
+
+      if M.use_virtual_text then
+        api.nvim_buf_set_extmark(buf, namespace, lint.range[1], lint.range[2], {
+          end_row = lint.range[3],
+          end_col = lint.range[4],
+          virt_text = { lint.message, ERROR_HL }
+        })
+      end
+    end
   end
+end
+
+local function add_lint_for_node(node, buf, error_type, complete_message)
   local node_text = vim.treesitter.query.get_node_text(node, buf):gsub("\n", " ")
   local error_text = complete_message or error_type .. ": " .. node_text
   local error_range = { node:range() }
-  if M.use_virtual_text then
-    api.nvim_buf_set_virtual_text(buf, namespace, error_range[1], { { error_text, ERROR_HL } }, {})
-  end
   table.insert(M.lints[buf], { type = error_type, range = error_range, message = error_text, node_text = node_text })
 end
 
@@ -81,7 +103,7 @@ function M.lint(query_buf)
     local error_node = utils.get_at_path(m, "error.node")
 
     if error_node then
-      lint_node(error_node, query_buf, "Syntax Error")
+      add_lint_for_node(error_node, query_buf, "Syntax Error")
     end
 
     local toplevel_node = utils.get_at_path(m, "toplevel-query.node")
@@ -90,7 +112,7 @@ function M.lint(query_buf)
       local err
       ok, err = pcall(vim.treesitter.parse_query, query_lang, query_text)
       if not ok then
-        lint_node(toplevel_node, query_buf, "Invalid Query", err)
+        add_lint_for_node(toplevel_node, query_buf, "Invalid Query", err)
       end
     end
 
@@ -113,7 +135,7 @@ function M.lint(query_buf)
           end, parser_info.symbols)
 
         if not found then
-          lint_node(node, query_buf, "Invalid Node Type")
+          add_lint_for_node(node, query_buf, "Invalid Node Type")
         end
       end
 
@@ -123,23 +145,13 @@ function M.lint(query_buf)
         local field_name = vim.treesitter.query.get_node_text(field_node, query_buf)
         local found = vim.tbl_contains(parser_info.fields, field_name)
         if not found then
-          lint_node(field_node, query_buf, "Invalid Field")
+          add_lint_for_node(field_node, query_buf, "Invalid Field")
         end
       end
     end
   end
 
-  if M.use_diagnostics then
-    local diagnostics = vim.tbl_map(function(lint)
-      return {
-        lnum = lint.range[1], end_lnum = lint.range[3],
-        col = lint.range[2], end_col = lint.range[4],
-        severity = vim.diagnostic.ERROR,
-        message = lint.message
-      }
-    end, M.lints[query_buf])
-    vim.diagnostic.set(namespace, query_buf, diagnostics)
-  end
+  show_lints(query_buf, M.lints[query_buf])
   return M.lints[query_buf]
 end
 
