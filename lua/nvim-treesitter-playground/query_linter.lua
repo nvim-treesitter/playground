@@ -5,7 +5,7 @@ local ts_utils = require "nvim-treesitter.ts_utils"
 local utils = require "nvim-treesitter.utils"
 local configs = require "nvim-treesitter.configs"
 
-local hl_namespace = api.nvim_create_namespace "nvim-playground-lints"
+local namespace = api.nvim_create_namespace "nvim-playground-lints"
 local ERROR_HL = "TSQueryLinterError"
 local MAGIC_NODE_NAMES = { "_", "ERROR" }
 local playground_module = require "nvim-treesitter-playground.internal"
@@ -13,18 +13,19 @@ local playground_module = require "nvim-treesitter-playground.internal"
 local M = {}
 
 M.lints = {}
-M.use_virtual_text = true
+M.use_diagnostics = true
+M.use_virtual_text = false
 M.lint_events = { "BufWrite", "CursorHold" }
 
 local function lint_node(node, buf, error_type, complete_message)
-  if error_type ~= "Invalid Query" then
-    ts_utils.highlight_node(node, buf, hl_namespace, ERROR_HL)
+  if not M.use_diagnostics and error_type ~= "Invalid Query" then
+    ts_utils.highlight_node(node, buf, namespace, ERROR_HL)
   end
   local node_text = vim.treesitter.query.get_node_text(node, buf):gsub("\n", " ")
   local error_text = complete_message or error_type .. ": " .. node_text
   local error_range = { node:range() }
   if M.use_virtual_text then
-    api.nvim_buf_set_virtual_text(buf, hl_namespace, error_range[1], { { error_text, ERROR_HL } }, {})
+    api.nvim_buf_set_virtual_text(buf, namespace, error_range[1], { { error_text, ERROR_HL } }, {})
   end
   table.insert(M.lints[buf], { type = error_type, range = error_range, message = error_text, node_text = node_text })
 end
@@ -127,17 +128,31 @@ function M.lint(query_buf)
       end
     end
   end
+
+  if M.use_diagnostics then
+    local diagnostics = vim.tbl_map(function(lint)
+      return {
+        lnum = lint.range[1], end_lnum = lint.range[3],
+        col = lint.range[2], end_col = lint.range[4],
+        severity = vim.diagnostic.ERROR,
+        message = lint.message
+      }
+    end, M.lints[query_buf])
+    vim.diagnostic.set(namespace, query_buf, diagnostics)
+  end
   return M.lints[query_buf]
 end
 
 function M.clear_virtual_text(buf)
-  api.nvim_buf_clear_namespace(buf, hl_namespace, 0, -1)
+  vim.diagnostic.reset(namespace, buf)
+  api.nvim_buf_clear_namespace(buf, namespace, 0, -1)
 end
 
 function M.attach(buf, _)
   M.lints[buf] = {}
 
   local config = configs.get_module "query_linter"
+  M.use_diagnostics = config.use_diagnostics
   M.use_virtual_text = config.use_virtual_text
   M.lint_events = config.lint_events
 
