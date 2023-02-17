@@ -22,7 +22,7 @@ function M.init()
     },
     query_linter = {
       module_path = "nvim-treesitter-playground.query_linter",
-      use_virtual_text = true,
+      use_diagnostics = true,
       lint_events = { "BufWrite", "CursorHold" },
       is_supported = function(lang)
         return lang == "query" and parsers.has_parser "query"
