@@ -18,10 +18,12 @@ local function show_lints(buf, lints)
   if M.use_diagnostics then
     local diagnostics = vim.tbl_map(function(lint)
       return {
-        lnum = lint.range[1], end_lnum = lint.range[3],
-        col = lint.range[2], end_col = lint.range[4],
+        lnum = lint.range[1],
+        end_lnum = lint.range[3],
+        col = lint.range[2],
+        end_col = lint.range[4],
         severity = vim.diagnostic.ERROR,
-        message = lint.message
+        message = lint.message,
       }
     end, lints)
     vim.diagnostic.set(namespace, buf, diagnostics)
