@@ -1,4 +1,5 @@
 local api = vim.api
+local ts = require "nvim-treesitter.compat"
 local queries = require "nvim-treesitter.query"
 local parsers = require "nvim-treesitter.parsers"
 local utils = require "nvim-treesitter.utils"
@@ -31,7 +32,7 @@ local function show_lints(buf, lints)
 end
 
 local function add_lint_for_node(node, buf, error_type, complete_message)
-  local node_text = vim.treesitter.query.get_node_text(node, buf):gsub("\n", " ")
+  local node_text = vim.treesitter.get_node_text(node, buf):gsub("\n", " ")
   local error_text = complete_message or error_type .. ": " .. node_text
   local error_range = { node:range() }
   table.insert(M.lints[buf], { type = error_type, range = error_range, message = error_text, node_text = node_text })
@@ -76,7 +77,7 @@ function M.lint(query_buf)
 
   local query_lang = M.guess_query_lang(query_buf)
 
-  local ok, parser_info = pcall(vim.treesitter.inspect_language, query_lang)
+  local ok, parser_info = pcall(vim.treesitter.language.inspect(), query_lang)
 
   if not ok then
     return
@@ -93,9 +94,9 @@ function M.lint(query_buf)
 
     local toplevel_node = utils.get_at_path(m, "toplevel-query.node")
     if toplevel_node and query_lang then
-      local query_text = vim.treesitter.query.get_node_text(toplevel_node, query_buf)
+      local query_text = vim.treesitter.get_node_text(toplevel_node, query_buf)
       local err
-      ok, err = pcall(vim.treesitter.parse_query, query_lang, query_text)
+      ok, err = pcall(ts.parse_query, query_lang, query_text)
       if not ok then
         add_lint_for_node(toplevel_node, query_buf, "Invalid Query", err)
       end
@@ -106,7 +107,7 @@ function M.lint(query_buf)
       local anonymous_node = utils.get_at_path(m, "anonymous_node.node")
       local node = named_node or anonymous_node
       if node then
-        local node_type = vim.treesitter.query.get_node_text(node, query_buf)
+        local node_type = vim.treesitter.get_node_text(node, query_buf)
 
         if anonymous_node then
           node_type = node_type:gsub('"(.*)".*$', "%1"):gsub("\\(.)", "%1")
@@ -127,7 +128,7 @@ function M.lint(query_buf)
       local field_node = utils.get_at_path(m, "field.node")
 
       if field_node then
-        local field_name = vim.treesitter.query.get_node_text(field_node, query_buf)
+        local field_name = vim.treesitter.get_node_text(field_node, query_buf)
         local found = vim.tbl_contains(parser_info.fields, field_name)
         if not found then
           add_lint_for_node(field_node, query_buf, "Invalid Field")
