@@ -13,7 +13,7 @@ function M.omnifunc(findstart, base)
   local buf = vim.api.nvim_get_current_buf()
   local query_lang = query_linter.guess_query_lang(buf)
 
-  local ok, parser_info = pcall(vim.treesitter.inspect_language, query_lang)
+  local ok, parser_info = pcall(vim.treesitter.language.inspect, query_lang)
 
   if ok then
     local items = {}

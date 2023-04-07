@@ -1,3 +1,4 @@
+local ts = require "nvim-treesitter.compat"
 local ts_query = require "nvim-treesitter.query"
 local parsers = require "nvim-treesitter.parsers"
 local locals = require "nvim-treesitter.locals"
@@ -8,7 +9,7 @@ function M.parse(bufnr, query, lang_tree)
   lang_tree = lang_tree or parsers.get_parser(bufnr)
 
   local success, parsed_query = pcall(function()
-    return vim.treesitter.parse_query(lang_tree:lang(), query)
+    return ts.parse_query(lang_tree:lang(), query)
   end)
 
   if not success then
