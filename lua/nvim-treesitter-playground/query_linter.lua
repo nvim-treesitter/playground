@@ -77,7 +77,7 @@ function M.lint(query_buf)
 
   local query_lang = M.guess_query_lang(query_buf)
 
-  local ok, parser_info = pcall(vim.treesitter.language.inspect(), query_lang)
+  local ok, parser_info = pcall(vim.treesitter.language.inspect, query_lang)
 
   if not ok then
     return
