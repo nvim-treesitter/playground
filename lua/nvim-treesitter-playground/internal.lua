@@ -9,6 +9,8 @@ local Promise = require "nvim-treesitter-playground.promise"
 local api = vim.api
 local luv = vim.loop
 
+local ts_compat = require "nvim-treesitter.compat"
+
 local M = {}
 
 local fs_mkdir = Promise.promisify(luv.fs_mkdir)
@@ -517,7 +519,7 @@ function M.update_query(bufnr, query_bufnr)
   for capture_match in ts_query.iter_group_results(query_bufnr, "captures") do
     table.insert(M._entries[bufnr].captures, capture_match.capture)
 
-    local capture = vim.treesitter.get_node_text(capture_match.capture.name.node, query_bufnr)
+    local capture = ts_compat.get_node_text(capture_match.capture.name.node, query_bufnr)
 
     if not capture_by_color[capture] then
       capture_by_color[capture] = "TSPlaygroundCapture" .. index
@@ -581,7 +583,7 @@ function M.on_query_cursor_move(bufnr)
     local _, _, capture_end = capture.def.node:end_()
     local _, _, start = node_at_point:start()
     local _, _, _end = node_at_point:end_()
-    local capture_name = vim.treesitter.get_node_text(capture.name.node, api.nvim_get_current_buf())
+    local capture_name = ts_compat.get_node_text(capture.name.node, api.nvim_get_current_buf())
 
     if start >= capture_start and _end <= capture_end and capture_name then
       M.highlight_matched_query_nodes_from_capture(bufnr, capture_name)
