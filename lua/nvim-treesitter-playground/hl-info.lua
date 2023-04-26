@@ -37,6 +37,18 @@ function M.get_syntax_hl()
   return matches
 end
 
+function M.get_lsp_hl()
+  local results = vim.lsp.semantic_tokens.get_at_pos()
+  local highlights = {}
+
+  for _, hl in ipairs(results) do
+    local line = "* **@lsp.type." .. hl.type .. "**"
+    table.insert(highlights, line)
+  end
+
+  return highlights
+end
+
 function M.show_hl_captures()
   local buf = vim.api.nvim_get_current_buf()
   local result = {}
@@ -61,6 +73,11 @@ function M.show_hl_captures()
   if vim.b.current_syntax ~= nil or #result == 0 then
     local matches = M.get_syntax_hl()
     add_to_result(matches, "Syntax")
+  end
+
+  if #vim.lsp.buf_get_clients() > 0 then
+    local matches = M.get_lsp_hl()
+    add_to_result(matches, "LSP")
   end
 
   if #result == 0 then
