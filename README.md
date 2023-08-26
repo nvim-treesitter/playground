@@ -4,6 +4,14 @@ View treesitter information directly in Neovim!
 
 ![demo](https://user-images.githubusercontent.com/2361214/202389106-244ac890-9442-4759-9b2c-4fe3c247dfbc.gif)
 
+## Deprecation notice
+
+This plugin is **deprecated** since the functionality is included in Neovim: Use
+
+- `:Inspect` to show the highlight groups under the cursor
+- `:InspectTree` to show the parsed syntax tree ("TSPlayground")
+- `:PreviewQuery` to open the Query Editor (Nvim 0.10+)
+
 ## Requirements
   - Neovim [nightly](https://github.com/neovim/neovim#install-from-source)
   - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) plugin (with the `query` grammar installed)
