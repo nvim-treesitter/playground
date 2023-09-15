@@ -10,7 +10,7 @@ This plugin is **deprecated** since the functionality is included in Neovim: Use
 
 - `:Inspect` to show the highlight groups under the cursor
 - `:InspectTree` to show the parsed syntax tree ("TSPlayground")
-- `:PreviewQuery` to open the Query Editor (Nvim 0.10+)
+- `:EditQuery` to open the Live Query Editor (Nvim 0.10+)
 
 ## Requirements
   - Neovim [nightly](https://github.com/neovim/neovim#install-from-source)
