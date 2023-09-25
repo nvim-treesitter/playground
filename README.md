@@ -40,6 +40,7 @@ require "nvim-treesitter.configs".setup {
     disable = {},
     updatetime = 25, -- Debounced time for highlighting nodes in the playground from source code
     persist_queries = false, -- Whether the query persists across vim sessions
+    floating_window_zindex = 200,
     keybindings = {
       toggle_query_editor = 'o',
       toggle_hl_groups = 'i',

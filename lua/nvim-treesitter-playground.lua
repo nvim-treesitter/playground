@@ -7,6 +7,7 @@ function M.init()
       module_path = "nvim-treesitter-playground.internal",
       updatetime = 25,
       persist_queries = false,
+      floating_window_zindex = 200,
       keybindings = {
         toggle_query_editor = "o",
         toggle_hl_groups = "i",
