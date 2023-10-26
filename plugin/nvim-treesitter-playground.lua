@@ -19,10 +19,14 @@ end, {})
 api.nvim_create_user_command("TSNodeUnderCursor", function()
   require("nvim-treesitter-playground.hl-info").show_ts_node()
 end, {})
+---@deprecated
 api.nvim_create_user_command("TSCaptureUnderCursor", function()
-  require("nvim-treesitter-playground.hl-info").show_hl_captures()
+  vim.notify("TSCaptureUnderCursor was removed. Use Neovim's built-in `:Inspect` instead!", vim.log.levels.ERROR)
 end, {})
 ---@deprecated
 api.nvim_create_user_command("TSHighlightCapturesUnderCursor", function()
-  require("nvim-treesitter-playground.hl-info").show_hl_captures()
+  vim.notify(
+    "TSHighlightCapturesUnderCursor was removed. Use Neovim's built-in `:Inspect` instead!",
+    vim.log.levels.ERROR
+  )
 end, {})
